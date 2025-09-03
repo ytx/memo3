@@ -1,0 +1,25 @@
+{
+  "name": "memo3",
+  "productName": "memo3",
+  "version": "1.0.0",
+  "description": "A simple memo application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-packager . memo3 --platform=darwin --arch=x64 --out=dist/ --icon=icon.icns --app-bundle-id=com.memo3.app --overwrite",
+    "build-universal": "electron-packager . memo3 --platform=darwin --arch=universal --out=dist/ --icon=icon.icns --app-bundle-id=com.memo3.app --overwrite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["memo", "markdown", "editor", "electron"],
+  "author": "memo3",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^37.4.0",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "ace-builds": "^1.43.2",
+    "chokidar": "^4.0.3"
+  }
+}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>memo3</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- サイドバー -->
+    <div class="sidebar">
+      
+      
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="ファイル名・本文検索...">
+        <button id="clear-search-btn" class="btn-clear" title="検索をクリア">×</button>
+      </div>
+      
+      <div class="search-results" id="search-results" style="display: none;">
+        <!-- 検索結果がここに表示される -->
+      </div>
+      
+      <div class="file-list" id="file-list">
+        <!-- ファイルリストがここに動的に追加される -->
+      </div>
+    </div>
+    
+    <!-- エディタエリア -->
+    <div class="editor-container">
+      <div class="editor-header">
+        <div class="file-info">
+          <div class="folder-path" id="root-folder-path">フォルダを選択してください</div>
+          <div class="file-path" id="current-file-path">ファイルが選択されていません</div>
+        </div>
+        <div class="editor-actions">
+          <button id="toggle-whitespace-btn" class="btn-icon" title="空白文字の表示/非表示">◯</button>
+          <button id="font-decrease-btn" class="btn-icon" title="フォントサイズを小さく">A-</button>
+          <button id="font-increase-btn" class="btn-icon" title="フォントサイズを大きく">A+</button>
+          <button id="settings-btn" class="btn-icon" title="設定">⚙️</button>
+        </div>
+      </div>
+      
+      <!-- タブバー -->
+      <div class="tab-bar" id="tab-bar">
+        <div class="tab-list" id="tab-list">
+          <!-- タブがここに動的に追加される -->
+        </div>
+        <div class="tab-actions">
+          <button id="new-tab-btn" class="btn-tab" title="新しいタブ">+</button>
+        </div>
+      </div>
+      
+      <!-- エディタコンテナ -->
+      <div class="editor-workspace" id="editor-workspace">
+        <!-- エディタがここに動的に追加される -->
+      </div>
+      
+      <div class="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="word-count">Words: 0</span>
+        <span id="char-count">Chars: 0</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 設定ダイアログ -->
+  <div id="settings-dialog" class="dialog hidden">
+    <div class="dialog-content">
+      <h2>設定</h2>
+      
+      <div class="settings-group">
+        <label for="current-folder-display">作業フォルダ:</label>
+        <input type="text" id="current-folder-display" readonly placeholder="フォルダが選択されていません">
+        <div style="text-align: right; margin-top: 8px;">
+          <button type="button" id="folder-select-btn" class="btn-secondary">選択</button>
+        </div>
+      </div>
+      
+      <div class="settings-group">
+        <label for="keybinding-select">キーバインド:</label>
+        <select id="keybinding-select">
+          <option value="">標準</option>
+          <option value="ace/keyboard/vim">Vim</option>
+          <option value="ace/keyboard/emacs">Emacs</option>
+          <option value="ace/keyboard/sublime">Sublime</option>
+          <option value="ace/keyboard/vscode">VSCode</option>
+        </select>
+      </div>
+      
+      <div class="settings-group">
+        <label for="theme-select">テーマ:</label>
+        <select id="theme-select">
+          <option value="ace/theme/monokai">Monokai</option>
+          <option value="ace/theme/github">GitHub</option>
+          <option value="ace/theme/tomorrow">Tomorrow</option>
+          <option value="ace/theme/twilight">Twilight</option>
+          <option value="ace/theme/solarized_dark">Solarized Dark</option>
+          <option value="ace/theme/solarized_light">Solarized Light</option>
+          <option value="ace/theme/dracula">Dracula</option>
+        </select>
+      </div>
+      
+      <div class="settings-group">
+        <label for="font-size">フォントサイズ:</label>
+        <input type="number" id="font-size" min="10" max="30" value="14">
+      </div>
+      
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" id="word-wrap">
+          折り返し表示
+        </label>
+      </div>
+      
+      <div class="settings-group">
+        <label>
+          <input type="checkbox" id="show-line-numbers">
+          行番号を表示
+        </label>
+      </div>
+      
+      <div class="dialog-actions">
+        <button id="save-settings-btn" class="btn-primary">保存</button>
+        <button id="cancel-settings-btn" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- コンテキストメニュー -->
+  <div id="context-menu" class="context-menu">
+    <div id="context-rename" class="context-menu-item">ファイル名更新</div>
+    <div id="context-delete" class="context-menu-item danger">削除</div>
+  </div>
+  
+  
+  <!-- ステータスバー用コンテキストメニュー -->
+  <div id="status-context-menu" class="context-menu">
+    <div id="status-devtools" class="context-menu-item">開発者ツール</div>
+  </div>
+  
+  <!-- タブ用コンテキストメニュー -->
+  <div id="tab-context-menu" class="context-menu">
+    <div id="tab-close-all" class="context-menu-item">すべてのタブを閉じる</div>
+  </div>
+  
+  <script src="node_modules/ace-builds/src-noconflict/ace.js"></script>
+  <script src="node_modules/ace-builds/src-noconflict/ext-language_tools.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
