@@ -701,3 +701,65 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* ACEエディタの検索ボックス位置調整 */
+.ace_search {
+  background-color: var(--sidebar-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+  color: var(--text-color) !important;
+  position: absolute !important;
+  right: 80px !important;
+  top: 10px !important;
+  left: auto !important;
+  width: auto !important;
+  max-width: 320px !important;
+  min-width: 280px !important;
+  z-index: 9999 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ace_search_form,
+.ace_replace_form {
+  border: none !important;
+  background: transparent !important;
+  padding: 4px !important;
+}
+
+.ace_search_field {
+  background-color: var(--bg-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 3px !important;
+  color: var(--text-color) !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  min-width: 150px !important;
+  max-width: 200px !important;
+}
+
+.ace_searchbtn,
+.ace_replacebtn {
+  background: var(--button-color) !important;
+  border: 1px solid var(--button-color) !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+  padding: 4px 8px !important;
+  margin: 2px !important;
+  font-size: 11px !important;
+}
+
+.ace_searchbtn:hover,
+.ace_replacebtn:hover {
+  background: var(--button-hover-color) !important;
+}
+
+.ace_searchbtn_close {
+  background: var(--border-color) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.ace_searchbtn_close:hover {
+  background: #ff4444 !important;
+  color: #fff !important;
+}

@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('api', {
   // 開発者ツール
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
   
+  // URL and search
+  openUrl: (url) => ipcRenderer.invoke('open-url', url),
+  searchGoogle: (searchText) => ipcRenderer.invoke('search-google', searchText),
+  
   // メインプロセスからのイベント
   onNewMemo: (callback) => {
     ipcRenderer.on('new-memo', callback);

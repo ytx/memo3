@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
@@ -508,11 +508,32 @@ ipcMain.handle('select-folder', async () => {
   if (!result.canceled && result.filePaths.length > 0) {
     rootFolder = result.filePaths[0];
     await saveWorkspace();
-    await initializeFiles();
+    await scanFiles();
+    setupFileWatcher();
     return { success: true, folderPath: rootFolder };
   }
   
   return { success: false };
+});
+
+// URL and search handlers
+ipcMain.handle('open-url', async (_, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('search-google', async (_, searchText) => {
+  try {
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchText)}`;
+    await shell.openExternal(searchUrl);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // 開発者ツール

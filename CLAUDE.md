@@ -72,6 +72,11 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Settings & Session Management**
 - `get-settings`, `save-settings` - Editor settings management (with real-time persistence)
 - `get-session`, `save-session` - Session state management (open tabs, active tab)
+- `select-folder` - Folder selection with immediate UI update (no restart required)
+
+**URL and External Actions**
+- `open-url` - Open URLs in default browser from editor context menu
+- `search-google` - Google search for selected text from editor context menu
 
 **Legacy Support (Backwards Compatibility)**
 - `get-memos`, `save-memo`, `delete-memo`, `search-memos` - Legacy memo operations
@@ -130,9 +135,17 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Context Menu System**
 - **File Context Menu**: Right-click files for "ファイル名更新" (filename update) and "削除" (delete)
 - **Status Bar Context Menu**: Right-click status bar for "開発者ツール" (developer tools)
+- **Editor Context Menu**: Right-click in editor for URL opening, Google search, and standard editing functions
 - **Smart Positioning**: Context menus automatically adjust position to stay within screen bounds
 - **Filename Updates**: Auto-generates new filenames based on file content, preserves extensions
 - **Safety Confirmations**: Confirmation dialogs before file deletion
+
+**Advanced Editor Features**
+- **URL Detection**: Automatically detects URLs in text, right-click to open in browser
+- **Text Selection Search**: Select text and right-click to search on Google
+- **Enhanced Search Box**: Properly positioned search interface with theme integration
+- **Emacs Keybinding Support**: Full Emacs-style search navigation with ^S (next), ^R (previous), ^G (close)
+- **Smart Search Focus**: Search field interactions automatically return focus to editor
 
 **Behavior Examples**
 1. **New File Creation**: Click + button → New tab opens with placeholder. Type "Hello" + Enter + "World" → File "Hello.md" created automatically, tab title updates to "Hello"
@@ -141,6 +154,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 4. **Theme Switching**: Change ACE theme in settings → App colors automatically match editor theme
 5. **Developer Tools**: Right-click status bar → "開発者ツール" → Opens in separate window
 6. **Smart Positioning**: Right-click near screen edge → Context menu automatically repositions to stay visible
+7. **URL Opening**: Type https://example.com → Right-click on URL → "URLを開く" → Opens in default browser
+8. **Google Search**: Select "machine learning" text → Right-click → "Googleで検索" → Opens Google search in browser
+9. **Emacs Search**: Set Emacs keybinding → ^S opens search → Type query → ^S next match → ^R previous → ^G close
+10. **Folder Selection**: Settings → Select folder → File list updates immediately without restart
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

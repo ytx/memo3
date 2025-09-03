@@ -345,6 +345,23 @@ function initEditor(tabId, containerId) {
   // キーバインドの設定
   if (settings.keybinding) {
     editor.setKeyboardHandler(settings.keybinding);
+    
+    // Emacsキーバインドの場合、Ctrl+Sのコマンドを再度追加
+    if (settings.keybinding === 'ace/keyboard/emacs') {
+      setTimeout(() => {
+        editor.commands.addCommand({
+          name: 'emacsSearchOverride',
+          bindKey: {
+            win: 'Ctrl-S',
+            mac: 'Ctrl-S'
+          },
+          exec: function(editor) {
+            console.log('Emacs Ctrl+S override triggered');
+            editor.execCommand('find');
+          }
+        });
+      }, 100);
+    }
   }
   
   // 自動補完の有効化
@@ -353,6 +370,67 @@ function initEditor(tabId, containerId) {
     enableSnippets: true,
     enableLiveAutocompletion: false
   });
+  
+  // エディタの右クリックコンテキストメニューをカスタマイズ
+  editor.container.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showEditorContextMenu(e, tabId);
+  });
+  
+  // エディタのマウスイベントを処理する別の方法
+  editor.on('mousedown', (e) => {
+    if (e.domEvent.button === 2) { // 右クリック
+      e.domEvent.preventDefault();
+      showEditorContextMenu(e.domEvent, tabId);
+    }
+  });
+  
+  // エディタ固有のキーイベントリスナーを追加（Emacsキーバインド用）
+  editor.container.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's' && settings.keybinding === 'ace/keyboard/emacs') {
+      console.log('Editor-specific Ctrl+S for Emacs mode');
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 検索ボックスを直接制御
+      setTimeout(() => {
+        if (editor.searchBox) {
+          console.log('Hiding existing searchBox');
+          editor.searchBox.hide();
+          editor.searchBox = null;
+        }
+        
+        setTimeout(() => {
+          editor.focus();
+          editor.execCommand('find');
+          console.log('Find command executed from editor-specific handler');
+        }, 50);
+      }, 10);
+    }
+  });
+  
+  // 検索ボックスが閉じられた時のイベントリスナーを追加
+  editor.on('changeStatus', () => {
+    // 検索ボックスが閉じられた場合、エディタにフォーカスを戻す
+    setTimeout(() => {
+      if (!editor.searchBox || (editor.searchBox && editor.searchBox.element && editor.searchBox.element.style.display === 'none')) {
+        editor.focus();
+      }
+    }, 100);
+  });
+  
+  // エディタ内検索のキーバインド
+  editor.commands.addCommand({
+    name: 'findInEditor',
+    bindKey: {
+      win: 'Ctrl-F',
+      mac: 'Cmd-F'
+    },
+    exec: function(editor) {
+      editor.execCommand('find');
+    }
+  });
+  
   
   // エディタの変更を監視
   editor.session.on('change', () => {
@@ -380,6 +458,13 @@ function initEditor(tabId, containerId) {
   
   editor.on('changeSelection', () => {
     editorInteractions[tabId] = true;
+  });
+  
+  // エディタクリック時に確実にフォーカス
+  editor.container.addEventListener('mousedown', () => {
+    setTimeout(() => {
+      editor.focus();
+    }, 10);
   });
   
   // エディタのサイズ調整を強制実行
@@ -1054,6 +1139,192 @@ function hideStatusContextMenu() {
   statusContextMenu.style.display = 'none';
 }
 
+// エディタ用コンテキストメニューの表示
+function showEditorContextMenu(event, tabId) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const editor = editors[tabId];
+  if (!editor) return;
+  
+  const selectedText = editor.getSelectedText();
+  const cursorPosition = editor.getCursorPosition();
+  const lineText = editor.session.getLine(cursorPosition.row);
+  
+  // URLを検出（簡単な正規表現）
+  const urlRegex = /https?:\/\/[^\s]+/g;
+  const urlMatches = lineText.match(urlRegex);
+  let urlUnderCursor = null;
+  
+  if (urlMatches) {
+    for (let url of urlMatches) {
+      const urlStart = lineText.indexOf(url);
+      const urlEnd = urlStart + url.length;
+      if (cursorPosition.column >= urlStart && cursorPosition.column <= urlEnd) {
+        urlUnderCursor = url;
+        break;
+      }
+    }
+  }
+  
+  // コンテキストメニューを作成
+  const existingMenu = document.getElementById('editor-context-menu');
+  if (existingMenu) {
+    existingMenu.remove();
+  }
+  
+  const contextMenu = document.createElement('div');
+  contextMenu.id = 'editor-context-menu';
+  contextMenu.className = 'context-menu';
+  contextMenu.style.position = 'fixed';
+  contextMenu.style.zIndex = '99999';
+  contextMenu.style.backgroundColor = 'var(--sidebar-color)';
+  contextMenu.style.border = '1px solid var(--border-color)';
+  contextMenu.style.borderRadius = '4px';
+  contextMenu.style.padding = '4px 0';
+  contextMenu.style.minWidth = '180px';
+  contextMenu.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+  contextMenu.style.display = 'block';
+  contextMenu.style.visibility = 'visible';
+  
+  let menuItems = [];
+  
+  // URL関連メニュー
+  if (urlUnderCursor) {
+    menuItems.push({
+      text: 'URLを開く',
+      action: () => {
+        window.api.openUrl(urlUnderCursor);
+        hideEditorContextMenu();
+      }
+    });
+  }
+  
+  // 選択テキスト関連メニュー
+  if (selectedText && selectedText.trim()) {
+    if (menuItems.length > 0) {
+      menuItems.push({ separator: true });
+    }
+    
+    menuItems.push({
+      text: 'Googleで検索',
+      action: () => {
+        window.api.searchGoogle(selectedText.trim());
+        hideEditorContextMenu();
+      }
+    });
+  }
+  
+  // 標準メニュー
+  if (menuItems.length > 0) {
+    menuItems.push({ separator: true });
+  }
+  
+  menuItems.push(
+    {
+      text: '切り取り',
+      action: () => {
+        editor.execCommand('cut');
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: 'コピー',
+      action: () => {
+        editor.execCommand('copy');
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: '貼り付け',
+      action: () => {
+        editor.execCommand('paste');
+        hideEditorContextMenu();
+      }
+    },
+    { separator: true },
+    {
+      text: '検索',
+      action: () => {
+        editor.execCommand('find');
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: '置換',
+      action: () => {
+        editor.execCommand('replace');
+        hideEditorContextMenu();
+      }
+    }
+  );
+  
+  // メニューアイテムを作成
+  menuItems.forEach(item => {
+    if (item.separator) {
+      const separator = document.createElement('div');
+      separator.style.height = '1px';
+      separator.style.backgroundColor = 'var(--border-color)';
+      separator.style.margin = '4px 0';
+      contextMenu.appendChild(separator);
+    } else {
+      const menuItem = document.createElement('div');
+      menuItem.className = 'context-menu-item';
+      menuItem.textContent = item.text;
+      menuItem.style.padding = '8px 16px';
+      menuItem.style.cursor = 'pointer';
+      menuItem.style.color = 'var(--text-color)';
+      menuItem.style.fontSize = '14px';
+      menuItem.style.whiteSpace = 'nowrap';
+      
+      menuItem.addEventListener('mouseover', () => {
+        menuItem.style.backgroundColor = 'var(--button-color)';
+        menuItem.style.color = '#fff';
+      });
+      
+      menuItem.addEventListener('mouseout', () => {
+        menuItem.style.backgroundColor = 'transparent';
+        menuItem.style.color = 'var(--text-color)';
+      });
+      
+      menuItem.addEventListener('click', item.action);
+      contextMenu.appendChild(menuItem);
+    }
+  });
+  
+  document.body.appendChild(contextMenu);
+  
+  // 位置調整
+  const menuRect = contextMenu.getBoundingClientRect();
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  let left = event.pageX;
+  let top = event.pageY;
+  
+  if (left + menuRect.width > windowWidth) {
+    left = windowWidth - menuRect.width - 10;
+  }
+  
+  if (top + menuRect.height > windowHeight) {
+    top = event.pageY - menuRect.height;
+  }
+  
+  left = Math.max(10, left);
+  top = Math.max(10, top);
+  
+  contextMenu.style.left = left + 'px';
+  contextMenu.style.top = top + 'px';
+}
+
+// エディタ用コンテキストメニューを非表示
+function hideEditorContextMenu() {
+  const contextMenu = document.getElementById('editor-context-menu');
+  if (contextMenu) {
+    contextMenu.remove();
+  }
+}
+
 // タブ用コンテキストメニューの表示
 function showTabContextMenu(event, tabId) {
   event.preventDefault();
@@ -1353,6 +1624,23 @@ async function saveSettings() {
     
     if (settings.keybinding) {
       editor.setKeyboardHandler(settings.keybinding);
+      
+      // Emacsキーバインドの場合、Ctrl+Sのコマンドを再度追加
+      if (settings.keybinding === 'ace/keyboard/emacs') {
+        setTimeout(() => {
+          editor.commands.addCommand({
+            name: 'emacsSearchOverride',
+            bindKey: {
+              win: 'Ctrl-S',
+              mac: 'Ctrl-S'
+            },
+            exec: function(editor) {
+              console.log('Emacs Ctrl+S override triggered');
+              editor.execCommand('find');
+            }
+          });
+        }, 100);
+      }
     } else {
       editor.setKeyboardHandler(null);
     }
@@ -1462,19 +1750,102 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!e.target.closest('#tab-context-menu')) {
       hideTabContextMenu();
     }
+    if (!e.target.closest('#editor-context-menu')) {
+      hideEditorContextMenu();
+    }
   });
   document.addEventListener('contextmenu', (e) => {
-    // ファイル項目、ステータスバー、タブ以外での右クリックでは標準メニューを無効化
-    if (!e.target.closest('.file-item') && !e.target.closest('.status-bar') && !e.target.closest('.tab')) {
+    // ファイル項目、ステータスバー、タブ、エディタ以外での右クリックでは標準メニューを無効化
+    if (!e.target.closest('.file-item') && 
+        !e.target.closest('.status-bar') && 
+        !e.target.closest('.tab') &&
+        !e.target.closest('.ace-editor') &&
+        !e.target.closest('.ace_editor')) {
       e.preventDefault();
     }
   });
   
   // キーボードショートカット
   document.addEventListener('keydown', (e) => {
+    // キャプチャフェーズでEmacs検索キーを処理
+    if (settings.keybinding === 'ace/keyboard/emacs') {
+      const isAceTextInput = e.target.tagName === 'TEXTAREA' && e.target.className.includes('ace_text-input');
+      const isSearchField = e.target.classList && e.target.classList.contains('ace_search_field');
+      
+      if (isAceTextInput || isSearchField) {
+        const activeTab = tabManager.getActiveTab();
+        if (activeTab && editors[activeTab.id]) {
+          const editor = editors[activeTab.id];
+          const searchBoxOpen = editor.searchBox && editor.searchBox.element && editor.searchBox.element.style.display !== 'none';
+          
+          // ^S: 検索ボックスが閉じている時は開く、開いている時は次候補
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (searchBoxOpen) {
+              // 検索フィールドからの^Sの場合、エディタにフォーカスを戻してから次候補
+              if (isSearchField) {
+                editor.focus();
+                setTimeout(() => {
+                  editor.execCommand('findnext');
+                }, 10);
+              } else {
+                // エディタからの^Sの場合、次の候補
+                editor.execCommand('findnext');
+              }
+            } else {
+              // 検索ボックスが閉じている場合は開く
+              setTimeout(() => {
+                if (editor.searchBox) {
+                  editor.searchBox.hide();
+                  editor.searchBox = null;
+                }
+                
+                setTimeout(() => {
+                  editor.execCommand('find');
+                }, 50);
+              }, 10);
+            }
+            return;
+          }
+          
+          // ^R: 前の候補
+          if ((e.ctrlKey || e.metaKey) && e.key === 'r' && searchBoxOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isSearchField) {
+              editor.focus();
+              setTimeout(() => {
+                editor.execCommand('findprevious');
+              }, 10);
+            } else {
+              editor.execCommand('findprevious');
+            }
+            return;
+          }
+          
+          // ^G: 検索ボックスを閉じる
+          if ((e.ctrlKey || e.metaKey) && e.key === 'g' && searchBoxOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            editor.searchBox.hide();
+            editor.focus();
+            return;
+          }
+        }
+      }
+    }
+  }, true); // キャプチャフェーズで処理
+  
+  // 通常のキーボードショートカット（バブルフェーズ）
+  document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      saveFile();
+      // Emacsキーバインド以外の場合のみ保存
+      if (settings.keybinding !== 'ace/keyboard/emacs') {
+        e.preventDefault();
+        saveFile();
+      }
     }
   });
   
