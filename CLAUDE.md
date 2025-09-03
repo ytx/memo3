@@ -146,6 +146,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Enhanced Search Box**: Properly positioned search interface with theme integration
 - **Emacs Keybinding Support**: Full Emacs-style search navigation with ^S (next), ^R (previous), ^G (close)
 - **Smart Search Focus**: Search field interactions automatically return focus to editor
+- **System Clipboard Integration**: Complete clipboard synchronization with all applications
+- **Multi-layer Clipboard Handling**: ACE events, DOM events, keyboard commands, and context menus
+- **Cross-Platform Clipboard**: Works seamlessly on Windows, macOS, and Linux
+- **Keybinding-Specific Shortcuts**: Emacs ^W/Alt+W/^Y, standard Ctrl+C/X/V support
 
 **Behavior Examples**
 1. **New File Creation**: Click + button → New tab opens with placeholder. Type "Hello" + Enter + "World" → File "Hello.md" created automatically, tab title updates to "Hello"
@@ -158,6 +162,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 8. **Google Search**: Select "machine learning" text → Right-click → "Googleで検索" → Opens Google search in browser
 9. **Emacs Search**: Set Emacs keybinding → ^S opens search → Type query → ^S next match → ^R previous → ^G close
 10. **Folder Selection**: Settings → Select folder → File list updates immediately without restart
+11. **Clipboard Operations**: Select text → Ctrl+C (or right-click copy) → Switch to another app → Ctrl+V works perfectly
+12. **Emacs Clipboard**: Select text → ^W (cut) or Alt+W (copy) → ^Y (yank) → Text transfers to/from system clipboard
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)
