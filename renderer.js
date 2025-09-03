@@ -431,6 +431,202 @@ function initEditor(tabId, containerId) {
     }
   });
   
+  // 全キーバインド共通のシステムクリップボード連携
+  
+  // ACEエディタのコピー/カットイベントをインターセプト
+  editor.on('copy', async function(text) {
+    try {
+      // 文字列であることを確認してからクリップボードに書き込み
+      const textToWrite = typeof text === 'string' ? text : editor.getSelectedText();
+      if (textToWrite && typeof textToWrite === 'string') {
+        await navigator.clipboard.writeText(textToWrite);
+      }
+    } catch (error) {
+      console.log('Clipboard write failed:', error);
+    }
+  });
+  
+  editor.on('cut', async function(text) {
+    try {
+      // 文字列であることを確認してからクリップボードに書き込み
+      const textToWrite = typeof text === 'string' ? text : editor.getSelectedText();
+      if (textToWrite && typeof textToWrite === 'string') {
+        await navigator.clipboard.writeText(textToWrite);
+      }
+    } catch (error) {
+      console.log('Clipboard write failed:', error);
+    }
+  });
+  
+  // エディタコンテナでのクリップボードイベント処理
+  editor.container.addEventListener('copy', async function(e) {
+    const selectedText = editor.getSelectedText();
+    if (selectedText) {
+      try {
+        await navigator.clipboard.writeText(selectedText);
+        e.clipboardData?.setData('text/plain', selectedText);
+      } catch (error) {
+        console.log('Container copy failed:', error);
+      }
+    }
+  });
+  
+  editor.container.addEventListener('cut', async function(e) {
+    const selectedText = editor.getSelectedText();
+    if (selectedText) {
+      try {
+        await navigator.clipboard.writeText(selectedText);
+        e.clipboardData?.setData('text/plain', selectedText);
+        editor.execCommand('cut');
+      } catch (error) {
+        console.log('Container cut failed:', error);
+      }
+    }
+  });
+  
+  editor.container.addEventListener('paste', async function(e) {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText) {
+        e.preventDefault();
+        editor.insert(clipboardText);
+      }
+    } catch (error) {
+      // デフォルトの貼り付け動作を許可
+      console.log('Container paste failed:', error);
+    }
+  });
+  
+  // 標準的なコピー（Ctrl+C / Cmd+C）
+  editor.commands.addCommand({
+    name: 'copyToSystemClipboard',
+    bindKey: {
+      win: 'Ctrl-C',
+      mac: 'Cmd-C'
+    },
+    exec: async function(editor) {
+      const selectedText = editor.getSelectedText();
+      if (selectedText) {
+        try {
+          await navigator.clipboard.writeText(selectedText);
+          // ACEエディタのデフォルト動作も実行
+          editor.execCommand('copy');
+        } catch (error) {
+          // フォールバック: ACEエディタのデフォルト動作のみ
+          editor.execCommand('copy');
+        }
+      }
+    }
+  });
+  
+  // 標準的な切り取り（Ctrl+X / Cmd+X）
+  editor.commands.addCommand({
+    name: 'cutToSystemClipboard',
+    bindKey: {
+      win: 'Ctrl-X',
+      mac: 'Cmd-X'
+    },
+    exec: async function(editor) {
+      const selectedText = editor.getSelectedText();
+      if (selectedText) {
+        try {
+          await navigator.clipboard.writeText(selectedText);
+          editor.execCommand('cut');
+        } catch (error) {
+          // フォールバック: ACEエディタのデフォルト動作
+          editor.execCommand('cut');
+        }
+      }
+    }
+  });
+  
+  // 標準的な貼り付け（Ctrl+V / Cmd+V）
+  editor.commands.addCommand({
+    name: 'pasteFromSystemClipboard',
+    bindKey: {
+      win: 'Ctrl-V',
+      mac: 'Cmd-V'
+    },
+    exec: async function(editor) {
+      try {
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText) {
+          editor.insert(clipboardText);
+        }
+      } catch (error) {
+        // フォールバック: ACEエディタのデフォルト動作
+        editor.execCommand('paste');
+      }
+    }
+  });
+  
+  // Emacsキーバインド用の追加ショートカット
+  
+  // kill-region (^W)
+  editor.commands.addCommand({
+    name: 'killRegion',
+    bindKey: {
+      win: 'Ctrl-W',
+      mac: 'Ctrl-W'
+    },
+    exec: async function(editor) {
+      if (settings.keybinding === 'ace/keyboard/emacs') {
+        const selectedText = editor.getSelectedText();
+        if (selectedText && typeof selectedText === 'string') {
+          try {
+            await navigator.clipboard.writeText(selectedText);
+            // 選択範囲を削除
+            editor.session.replace(editor.getSelectionRange(), '');
+          } catch (error) {
+            editor.execCommand('cut');
+          }
+        }
+      }
+    }
+  });
+  
+  // kill-ring-save (Alt+W)
+  editor.commands.addCommand({
+    name: 'killRingSave',
+    bindKey: {
+      win: 'Alt-W',
+      mac: 'Alt-W'
+    },
+    exec: async function(editor) {
+      if (settings.keybinding === 'ace/keyboard/emacs') {
+        const selectedText = editor.getSelectedText();
+        if (selectedText && typeof selectedText === 'string') {
+          try {
+            await navigator.clipboard.writeText(selectedText);
+          } catch (error) {
+            editor.execCommand('copy');
+          }
+        }
+      }
+    }
+  });
+  
+  // yank (^Y)
+  editor.commands.addCommand({
+    name: 'yank',
+    bindKey: {
+      win: 'Ctrl-Y',
+      mac: 'Ctrl-Y'
+    },
+    exec: async function(editor) {
+      if (settings.keybinding === 'ace/keyboard/emacs') {
+        try {
+          const clipboardText = await navigator.clipboard.readText();
+          if (clipboardText) {
+            editor.insert(clipboardText);
+          }
+        } catch (error) {
+          editor.execCommand('paste');
+        }
+      }
+    }
+  });
+  
   
   // エディタの変更を監視
   editor.session.on('change', () => {
@@ -1223,22 +1419,47 @@ function showEditorContextMenu(event, tabId) {
   menuItems.push(
     {
       text: '切り取り',
-      action: () => {
-        editor.execCommand('cut');
+      action: async () => {
+        const selectedText = editor.getSelectedText();
+        if (selectedText) {
+          try {
+            await navigator.clipboard.writeText(selectedText);
+            editor.execCommand('cut');
+          } catch (error) {
+            // フォールバック: ACEエディタのコマンドのみ実行
+            editor.execCommand('cut');
+          }
+        }
         hideEditorContextMenu();
       }
     },
     {
       text: 'コピー',
-      action: () => {
-        editor.execCommand('copy');
+      action: async () => {
+        const selectedText = editor.getSelectedText();
+        if (selectedText) {
+          try {
+            await navigator.clipboard.writeText(selectedText);
+          } catch (error) {
+            // フォールバック: ACEエディタのコマンドのみ実行
+            editor.execCommand('copy');
+          }
+        }
         hideEditorContextMenu();
       }
     },
     {
       text: '貼り付け',
-      action: () => {
-        editor.execCommand('paste');
+      action: async () => {
+        try {
+          const clipboardText = await navigator.clipboard.readText();
+          if (clipboardText) {
+            editor.insert(clipboardText);
+          }
+        } catch (error) {
+          // フォールバック: ACEエディタのコマンドのみ実行
+          editor.execCommand('paste');
+        }
         hideEditorContextMenu();
       }
     },
