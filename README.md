@@ -1,10 +1,10 @@
 # memo3
 
-VSCodeライクな多機能マークダウンエディタ - Electronベースのメモアプリケーション
+Electronベースのメモアプリケーション
 
 ## 概要
 
-memo3は、VSCodeのような使いやすさを持つマークダウンエディタです。ファイルシステムベースの管理、多彩なタブ機能、強力な検索機能を備えたデスクトップアプリケーションです。
+memo3は、claude code で作成したメモアプリケーションです。
 
 ## 主な機能
 
@@ -139,8 +139,8 @@ npm run build-universal
 
 ## ライセンス
 
-ISC License
+not decided yet.
 
 ## 作者
 
-memo3 team
+ytx @ memo3
