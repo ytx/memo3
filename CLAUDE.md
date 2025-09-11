@@ -170,3 +170,9 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)
 - **Clean Shutdown**: All timers and resources are properly cleaned up on exit
 - **Session Auto-Save**: Session state saved on every tab operation for maximum reliability
+
+**macOS Specific Error Handling**
+- **IMK Error Suppression**: Handles `IMKCFRunLoopWakeUpReliable` errors from macOS Input Method Kit without crashing
+- **GPU Compositing Disabled**: Prevents display compositor issues that can cause input method conflicts
+- **Uncaught Exception Handling**: Specifically filters and handles IMK-related errors while preserving normal error handling
+- **Safe Dock Icon Setting**: Gracefully handles dock icon setting failures
