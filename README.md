@@ -84,6 +84,11 @@ Ctrl＋Kが使えることと、メモの書き始めに、ファイル名を決
 - **ファイル監視**: chokidar 4.0.3
 - **対応プラットフォーム**: macOS（Intel・Apple Silicon対応のUniversal Binary）
 
+### macOS 固有の問題対応
+
+- **IMK エラー対応**: macOS の Input Method Kit (IMK) に関連するエラーメッセージ `error messaging the mach port for IMKCFRunLoopWakeUpReliable` が発生してもアプリが停止しないよう対策済み
+- **エラー抑制**: 日本語入力時に発生する可能性のあるシステムレベルのエラーを適切にハンドリング
+
 ## インストール・起動方法
 
 ### 開発環境での起動

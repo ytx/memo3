@@ -26,6 +26,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Manages application lifecycle and window creation with standard title bar
 - Handles IPC communication with renderer process
 - Manages file-system based data persistence with chokidar file watching
+- Implements macOS-specific error handling for IMK (Input Method Kit) issues
 - Data is stored in:
   - User-selected root folder - All .md/.txt files (sorted by modification time, descending)
   - `workspace.json` - Workspace configuration (root folder path)

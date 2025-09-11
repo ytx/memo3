@@ -6,6 +6,13 @@ const chokidar = require('chokidar');
 // アプリケーション名を最初に設定
 app.setName('memo3');
 
+// macOS固有の設定
+if (process.platform === 'darwin') {
+  // 入力メソッド関連のエラーを抑制するための設定
+  app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+}
+
 let mainWindow;
 let memos = [];
 let rootFolder = null;
@@ -313,10 +320,26 @@ app.whenReady().then(async () => {
   await loadMemos();
   await loadWorkspace();
   
-  
-  // macOSでDockアイコンを設定
+  // macOS IMKエラー対策
   if (process.platform === 'darwin') {
-    app.dock.setIcon(path.join(__dirname, 'app-icon.png'));
+    // IMKエラーを抑制
+    process.on('uncaughtException', (error) => {
+      if (error.message && error.message.includes('IMKCFRunLoopWakeUpReliable')) {
+        // IMKエラーを無視してログのみ出力
+        console.warn('IMK error suppressed:', error.message);
+        return;
+      }
+      // その他のエラーは通常通り処理
+      console.error('Uncaught exception:', error);
+      process.exit(1);
+    });
+    
+    // Dockアイコンを設定
+    try {
+      app.dock.setIcon(path.join(__dirname, 'app-icon.png'));
+    } catch (error) {
+      console.warn('Could not set dock icon:', error.message);
+    }
   }
   
   createWindow();
