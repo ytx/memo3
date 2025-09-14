@@ -9,10 +9,12 @@ let editorInteractions = {}; // エディタとのユーザーインタラクシ
 let settings = {
   keybinding: '',
   theme: 'ace/theme/monokai',
+  themePreset2: 'ace/theme/github',
   fontSize: 14,
   wordWrap: true,
   showLineNumbers: true,
-  showInvisibles: false
+  showInvisibles: false,
+  themeIndex: 0
 };
 
 // ファイルの最初の非空白行をタイトルとして取得
@@ -1189,21 +1191,52 @@ function clearSearch() {
 }
 
 // 空白文字表示の切り替え
+// テーマの切り替え
+async function toggleTheme() {
+  const theme1 = document.getElementById('theme-select').value;
+  const theme2 = settings.themePreset2;
+
+  // テーマ1とテーマ2を切り替え
+  if (settings.theme === theme2) {
+    // 現在テーマ2なら、テーマ1に戻す
+    settings.theme = theme1;
+    settings.themeIndex = 0;
+  } else {
+    // 現在テーマ1なら、テーマ2に切り替え
+    settings.theme = theme2;
+    settings.themeIndex = 1;
+  }
+
+  // 全てのエディタに適用
+  Object.values(editors).forEach(editor => {
+    editor.setTheme(settings.theme);
+  });
+
+  // アプリのテーマも更新
+  updateAppTheme(settings.theme);
+
+  // 設定を保存
+  await window.api.saveSettings(settings);
+
+  const themeName = settings.theme.split('/').pop().replace('_', ' ');
+  showStatus(`テーマを ${themeName} に変更`);
+}
+
 async function toggleWhitespace() {
   settings.showInvisibles = !settings.showInvisibles;
-  
+
   // 全てのエディタに適用
   Object.values(editors).forEach(editor => {
     editor.setShowInvisibles(settings.showInvisibles);
   });
-  
+
   // ボタンの表示を更新
   const button = document.getElementById('toggle-whitespace-btn');
   button.style.backgroundColor = settings.showInvisibles ? '#007acc' : 'transparent';
-  
+
   // 設定を保存
   await window.api.saveSettings(settings);
-  
+
   showStatus(settings.showInvisibles ? '空白文字を表示中' : '空白文字を非表示');
 }
 
@@ -1736,6 +1769,7 @@ function showSettings() {
   document.getElementById('current-folder-display').value = rootFolder || '';
   document.getElementById('keybinding-select').value = settings.keybinding || '';
   document.getElementById('theme-select').value = settings.theme;
+  document.getElementById('theme-preset2').value = settings.themePreset2;
   document.getElementById('font-size').value = settings.fontSize;
   document.getElementById('word-wrap').checked = settings.wordWrap;
   document.getElementById('show-line-numbers').checked = settings.showLineNumbers;
@@ -1831,6 +1865,7 @@ function updateAppTheme(aceTheme) {
 async function saveSettings() {
   settings.keybinding = document.getElementById('keybinding-select').value;
   settings.theme = document.getElementById('theme-select').value;
+  settings.themePreset2 = document.getElementById('theme-preset2').value;
   settings.fontSize = parseInt(document.getElementById('font-size').value);
   settings.wordWrap = document.getElementById('word-wrap').checked;
   settings.showLineNumbers = document.getElementById('show-line-numbers').checked;
@@ -1890,10 +1925,20 @@ function updateRootFolderPath() {
 async function init() {
   // 設定の読み込み
   settings = await window.api.getSettings();
-  
+
+  // themePreset2を初期化（既存設定に無い場合）
+  if (!settings.themePreset2) {
+    settings.themePreset2 = 'ace/theme/github';
+  }
+
+  // themeIndexを初期化（既存設定に無い場合）
+  if (settings.themeIndex === undefined) {
+    settings.themeIndex = 0;
+  }
+
   // アプリ全体のテーマを適用
   updateAppTheme(settings.theme);
-  
+
   // 空白文字表示ボタンの初期状態を設定
   const whitespaceButton = document.getElementById('toggle-whitespace-btn');
   whitespaceButton.style.backgroundColor = settings.showInvisibles ? '#007acc' : 'transparent';
@@ -1917,6 +1962,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // ボタンのイベント
   // document.getElementById('new-file-btn').addEventListener('click', createNewFile); // 削除済み
+  document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
   document.getElementById('toggle-whitespace-btn').addEventListener('click', toggleWhitespace);
   document.getElementById('font-increase-btn').addEventListener('click', increaseFontSize);
   document.getElementById('font-decrease-btn').addEventListener('click', decreaseFontSize);

@@ -47,7 +47,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Multi-Tab Interface**: Open multiple files in tabs with drag-and-drop tab reordering
 - **Session Restoration**: Automatically restores open tabs and editor states on app restart
 - **Enhanced Search**: Search both filenames and file content with detailed results display
-- **Editor Controls**: Font size adjustment, whitespace character display, developer tools access
+- **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, developer tools access
+- **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
 - **File List Display**: Shows title (first non-empty line), filename, and full modification date/time
@@ -71,7 +72,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - `open-dev-tools` - Open developer tools in detached window
 
 **Settings & Session Management**
-- `get-settings`, `save-settings` - Editor settings management (with real-time persistence)
+- `get-settings`, `save-settings` - Editor settings management (includes theme presets, with real-time persistence)
 - `get-session`, `save-session` - Session state management (open tabs, active tab)
 - `select-folder` - Folder selection with immediate UI update (no restart required)
 
@@ -126,6 +127,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Dynamic App Theming**: App colors automatically match selected ACE editor theme
 - **CSS Variables**: Uses CSS custom properties for consistent theming
 - **Multiple Theme Support**: Monokai, GitHub, Tomorrow, Twilight, Solarized, Dracula themes
+- **Quick Theme Toggle**: 🎨 button allows instant switching between two preset themes configured in settings
 
 **File List Improvements**
 - **Three-Line Display**: Shows title, filename, and full date/time (YYYY/MM/DD HH:MM)
@@ -157,14 +159,16 @@ This is an Electron-based memo application with ACE editor integration for markd
 2. **Tab Reordering**: Drag tabs to reorder them. Visual feedback shows during drag operation
 3. **File Renaming**: Right-click file → "ファイル名更新" → Filename updates based on first non-empty line
 4. **Theme Switching**: Change ACE theme in settings → App colors automatically match editor theme
-5. **Developer Tools**: Right-click status bar → "開発者ツール" → Opens in separate window
-6. **Smart Positioning**: Right-click near screen edge → Context menu automatically repositions to stay visible
-7. **URL Opening**: Type https://example.com → Right-click on URL → "URLを開く" → Opens in default browser
-8. **Google Search**: Select "machine learning" text → Right-click → "Googleで検索" → Opens Google search in browser
-9. **Emacs Search**: Set Emacs keybinding → ^S opens search → Type query → ^S next match → ^R previous → ^G close
-10. **Folder Selection**: Settings → Select folder → File list updates immediately without restart
-11. **Clipboard Operations**: Select text → Ctrl+C (or right-click copy) → Switch to another app → Ctrl+V works perfectly
-12. **Emacs Clipboard**: Select text → ^W (cut) or Alt+W (copy) → ^Y (yank) → Text transfers to/from system clipboard
+5. **Quick Theme Toggle**: Click 🎨 button → Instantly switches between Theme 1 and Theme 2 configured in settings
+6. **Developer Tools**: Right-click status bar → "開発者ツール" → Opens in separate window
+7. **Smart Positioning**: Right-click near screen edge → Context menu automatically repositions to stay visible
+8. **URL Opening**: Type https://example.com → Right-click on URL → "URLを開く" → Opens in default browser
+9. **Google Search**: Select "machine learning" text → Right-click → "Googleで検索" → Opens Google search in browser
+10. **Emacs Search**: Set Emacs keybinding → ^S opens search → Type query → ^S next match → ^R previous → ^G close
+11. **Folder Selection**: Settings → Select folder → File list updates immediately without restart
+12. **Clipboard Operations**: Select text → Ctrl+C (or right-click copy) → Switch to another app → Ctrl+V works perfectly
+13. **Emacs Clipboard**: Select text → ^W (cut) or Alt+W (copy) → ^Y (yank) → Text transfers to/from system clipboard
+14. **Theme Configuration**: Settings → Select Theme 1 (e.g., Monokai) and Theme 2 (e.g., GitHub) → Save → Use 🎨 button to toggle between them
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

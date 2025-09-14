@@ -34,10 +34,11 @@
           <div class="file-path" id="current-file-path">ファイルが選択されていません</div>
         </div>
         <div class="editor-actions">
+          <button id="theme-toggle-btn" class="btn-icon btn-flat" title="テーマ切り替え">🎨</button>
           <button id="toggle-whitespace-btn" class="btn-icon" title="空白文字の表示/非表示">◯</button>
           <button id="font-decrease-btn" class="btn-icon" title="フォントサイズを小さく">A-</button>
           <button id="font-increase-btn" class="btn-icon" title="フォントサイズを大きく">A+</button>
-          <button id="settings-btn" class="btn-icon" title="設定">⚙️</button>
+          <button id="settings-btn" class="btn-icon btn-flat" title="設定">⚙️</button>
         </div>
       </div>
       
@@ -89,8 +90,21 @@
       </div>
       
       <div class="settings-group">
-        <label for="theme-select">テーマ:</label>
+        <label for="theme-select">テーマ1:</label>
         <select id="theme-select">
+          <option value="ace/theme/monokai">Monokai</option>
+          <option value="ace/theme/github">GitHub</option>
+          <option value="ace/theme/tomorrow">Tomorrow</option>
+          <option value="ace/theme/twilight">Twilight</option>
+          <option value="ace/theme/solarized_dark">Solarized Dark</option>
+          <option value="ace/theme/solarized_light">Solarized Light</option>
+          <option value="ace/theme/dracula">Dracula</option>
+        </select>
+      </div>
+
+      <div class="settings-group">
+        <label for="theme-preset2">テーマ2:</label>
+        <select id="theme-preset2">
           <option value="ace/theme/monokai">Monokai</option>
           <option value="ace/theme/github">GitHub</option>
           <option value="ace/theme/tomorrow">Tomorrow</option>

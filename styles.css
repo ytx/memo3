@@ -409,6 +409,16 @@ body {
   color: var(--text-color);
 }
 
+.btn-flat {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.btn-flat:hover {
+  background: var(--border-color) !important;
+}
+
 /* タブバー */
 .tab-bar {
   display: flex;
