@@ -128,6 +128,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **CSS Variables**: Uses CSS custom properties for consistent theming
 - **Multiple Theme Support**: Monokai, GitHub, Tomorrow, Twilight, Solarized, Dracula themes
 - **Quick Theme Toggle**: 🎨 button allows instant switching between two preset themes configured in settings
+- **Settings Preservation**: Theme toggle does not modify the configured theme presets in settings
 
 **File List Improvements**
 - **Three-Line Display**: Shows title, filename, and full date/time (YYYY/MM/DD HH:MM)
@@ -169,6 +170,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 12. **Clipboard Operations**: Select text → Ctrl+C (or right-click copy) → Switch to another app → Ctrl+V works perfectly
 13. **Emacs Clipboard**: Select text → ^W (cut) or Alt+W (copy) → ^Y (yank) → Text transfers to/from system clipboard
 14. **Theme Configuration**: Settings → Select Theme 1 (e.g., Monokai) and Theme 2 (e.g., GitHub) → Save → Use 🎨 button to toggle between them
+15. **Theme Toggle Preservation**: Click 🎨 button multiple times → Theme switches between configured presets → Settings dialog shows original Theme 1 and Theme 2 values unchanged
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

@@ -17,6 +17,9 @@ let settings = {
   themeIndex: 0
 };
 
+// 現在のテーマ（切り替え用）
+let currentTheme = '';
+
 // ファイルの最初の非空白行をタイトルとして取得
 function getFileTitle(file, content = '') {
   if (!content) return file ? file.name : 'Untitled';
@@ -337,7 +340,7 @@ function initEditor(tabId, containerId) {
   const editor = ace.edit(containerId);
   
   // 基本設定
-  editor.setTheme(settings.theme);
+  editor.setTheme(currentTheme || settings.theme);
   editor.session.setMode("ace/mode/markdown");
   editor.setFontSize(settings.fontSize);
   editor.setOption("wrap", settings.wordWrap);
@@ -1193,32 +1196,32 @@ function clearSearch() {
 // 空白文字表示の切り替え
 // テーマの切り替え
 async function toggleTheme() {
-  const theme1 = document.getElementById('theme-select').value;
+  const theme1 = settings.theme;
   const theme2 = settings.themePreset2;
 
   // テーマ1とテーマ2を切り替え
-  if (settings.theme === theme2) {
+  if (currentTheme === theme2) {
     // 現在テーマ2なら、テーマ1に戻す
-    settings.theme = theme1;
+    currentTheme = theme1;
     settings.themeIndex = 0;
   } else {
     // 現在テーマ1なら、テーマ2に切り替え
-    settings.theme = theme2;
+    currentTheme = theme2;
     settings.themeIndex = 1;
   }
 
   // 全てのエディタに適用
   Object.values(editors).forEach(editor => {
-    editor.setTheme(settings.theme);
+    editor.setTheme(currentTheme);
   });
 
   // アプリのテーマも更新
-  updateAppTheme(settings.theme);
+  updateAppTheme(currentTheme);
 
-  // 設定を保存
+  // themeIndexのみ保存（theme と themePreset2 は変更しない）
   await window.api.saveSettings(settings);
 
-  const themeName = settings.theme.split('/').pop().replace('_', ' ');
+  const themeName = currentTheme.split('/').pop().replace('_', ' ');
   showStatus(`テーマを ${themeName} に変更`);
 }
 
@@ -1870,9 +1873,12 @@ async function saveSettings() {
   settings.wordWrap = document.getElementById('word-wrap').checked;
   settings.showLineNumbers = document.getElementById('show-line-numbers').checked;
   
+  // 現在のテーマを更新
+  currentTheme = settings.themeIndex === 0 ? settings.theme : settings.themePreset2;
+
   // 全エディタに設定を適用
   Object.values(editors).forEach(editor => {
-    editor.setTheme(settings.theme);
+    editor.setTheme(currentTheme);
     editor.setFontSize(settings.fontSize);
     editor.setOption("wrap", settings.wordWrap);
     editor.renderer.setShowGutter(settings.showLineNumbers);
@@ -1903,7 +1909,7 @@ async function saveSettings() {
   });
   
   // アプリ全体のテーマを更新
-  updateAppTheme(settings.theme);
+  updateAppTheme(currentTheme);
   
   // 設定を保存
   await window.api.saveSettings(settings);
@@ -1936,8 +1942,11 @@ async function init() {
     settings.themeIndex = 0;
   }
 
+  // 現在のテーマを設定
+  currentTheme = settings.themeIndex === 0 ? settings.theme : settings.themePreset2;
+
   // アプリ全体のテーマを適用
-  updateAppTheme(settings.theme);
+  updateAppTheme(currentTheme);
 
   // 空白文字表示ボタンの初期状態を設定
   const whitespaceButton = document.getElementById('toggle-whitespace-btn');
