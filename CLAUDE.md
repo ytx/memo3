@@ -54,7 +54,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **File List Display**: Shows title (first non-empty line), filename, and full modification date/time
 - **Context Menus**: Right-click files for rename/delete, right-click status bar for developer tools
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
-- **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation
+- **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 
 ### IPC Communication Channels
@@ -119,6 +119,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 
 **Tab Management Enhancements**
 - **Drag-and-Drop Reordering**: Drag tabs to reorder them with visual feedback
+- **Tab Scroll Buttons**: Left (‹) and right (›) arrow buttons on either side of tab list for scrolling when many tabs are open
+- **Smart Layout**: Left scroll button on left side, right scroll button on right side, prevents overflow issues
+- **Smart Button States**: Scroll buttons auto-disable at edges of tab list
+- **Flexbox Optimization**: Tab list properly constrained with min-width: 0 to enable horizontal scrolling
 - **Dynamic Titles**: Tab titles auto-update based on file content (first non-empty line)
 - **Smart Tab Creation**: + button creates new tabs with immediate editor focus
 - **Visual States**: Active tabs and hover states clearly indicated

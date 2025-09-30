@@ -214,7 +214,10 @@ class TabManager {
       tabElement.onclick = () => this.switchToTab(tab.id);
       tabList.appendChild(tabElement);
     });
-    
+
+    // スクロールボタンの状態を更新
+    setTimeout(updateScrollButtons, 0);
+
     // セッションを保存
     this.saveSession();
   }
@@ -1264,17 +1267,51 @@ async function increaseFontSize() {
 async function decreaseFontSize() {
   if (settings.fontSize > 10) {
     settings.fontSize -= 1;
-    
+
     // 全てのエディタに適用
     Object.values(editors).forEach(editor => {
       editor.setFontSize(settings.fontSize);
     });
-    
+
     // 設定を保存
     await window.api.saveSettings(settings);
-    
+
     showStatus(`フォントサイズ: ${settings.fontSize}px`);
   }
+}
+
+// タブを左にスクロール
+function scrollTabsLeft() {
+  const tabList = document.getElementById('tab-list');
+  tabList.scrollBy({
+    left: -200,
+    behavior: 'smooth'
+  });
+  updateScrollButtons();
+}
+
+// タブを右にスクロール
+function scrollTabsRight() {
+  const tabList = document.getElementById('tab-list');
+  tabList.scrollBy({
+    left: 200,
+    behavior: 'smooth'
+  });
+  updateScrollButtons();
+}
+
+// スクロールボタンの有効/無効を更新
+function updateScrollButtons() {
+  const tabList = document.getElementById('tab-list');
+  const scrollLeftBtn = document.getElementById('tab-scroll-left');
+  const scrollRightBtn = document.getElementById('tab-scroll-right');
+
+  // 左端にいるか確認
+  scrollLeftBtn.disabled = tabList.scrollLeft <= 0;
+
+  // 右端にいるか確認
+  const maxScroll = tabList.scrollWidth - tabList.clientWidth;
+  scrollRightBtn.disabled = tabList.scrollLeft >= maxScroll;
 }
 
 // コンテキストメニューの表示
@@ -1979,8 +2016,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 新しいタブを作成して新規ファイルとする
     createNewTabWithFile();
   });
-  
-  
+
+  // タブスクロールボタン
+  document.getElementById('tab-scroll-left').addEventListener('click', scrollTabsLeft);
+  document.getElementById('tab-scroll-right').addEventListener('click', scrollTabsRight);
+
+  // タブリストのスクロールイベントを監視
+  const tabList = document.getElementById('tab-list');
+  tabList.addEventListener('scroll', updateScrollButtons);
+
   document.getElementById('settings-btn').addEventListener('click', showSettings);
   document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
   document.getElementById('cancel-settings-btn').addEventListener('click', hideSettings);
