@@ -1263,6 +1263,23 @@ async function increaseFontSize() {
   }
 }
 
+// プレビューを開く
+async function openPreview() {
+  const result = await window.api.openPreview();
+  if (result.success) {
+    // 現在のアクティブタブの内容を送信
+    const activeTab = tabManager.getActiveTab();
+    if (activeTab) {
+      const editor = editors[activeTab.id];
+      if (editor) {
+        const content = editor.getValue();
+        await window.api.updatePreview(content);
+      }
+    }
+    showStatus('プレビューウィンドウを開きました');
+  }
+}
+
 // フォントサイズの縮小
 async function decreaseFontSize() {
   if (settings.fontSize > 10) {
@@ -2058,6 +2075,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // ボタンのイベント
   // document.getElementById('new-file-btn').addEventListener('click', createNewFile); // 削除済み
+  document.getElementById('preview-btn').addEventListener('click', openPreview);
   document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
   document.getElementById('toggle-whitespace-btn').addEventListener('click', toggleWhitespace);
   document.getElementById('font-increase-btn').addEventListener('click', increaseFontSize);

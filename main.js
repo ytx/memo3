@@ -14,6 +14,7 @@ if (process.platform === 'darwin') {
 }
 
 let mainWindow;
+let previewWindow = null;
 let memos = [];
 let rootFolder = null;
 let fileWatcher = null;
@@ -576,6 +577,41 @@ ipcMain.handle('search-google', async (_, searchText) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// プレビューウィンドウ
+ipcMain.handle('open-preview', async () => {
+  if (previewWindow) {
+    previewWindow.focus();
+    return { success: true };
+  }
+
+  previewWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    title: 'プレビュー',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  previewWindow.loadFile('preview.html');
+
+  previewWindow.on('closed', () => {
+    previewWindow = null;
+  });
+
+  return { success: true };
+});
+
+ipcMain.handle('update-preview', async (_, content) => {
+  if (previewWindow && !previewWindow.isDestroyed()) {
+    previewWindow.webContents.send('preview-update', content);
+    return { success: true };
+  }
+  return { success: false };
 });
 
 // 開発者ツール

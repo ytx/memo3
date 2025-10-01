@@ -38,6 +38,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 - `index.html` - Main UI with minimal sidebar, draggable tab bar, editor workspace, and dual context menus
 - `renderer.js` - Handles smart tab management, drag-and-drop reordering, content-based file creation, and theme integration
 - `styles.css` - Dynamic theming system with CSS variables, supports 7+ ACE editor themes
+- `preview.html` - Preview window UI with markdown rendering and controls
+- `preview-renderer.js` - Markdown to HTML conversion and preview window functionality
 
 **Security**
 - `preload.js` - Provides secure bridge between main and renderer processes using contextBridge
@@ -48,7 +50,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Multi-Tab Interface**: Open multiple files in tabs with drag-and-drop tab reordering
 - **Session Restoration**: Automatically restores open tabs and editor states on app restart
 - **Enhanced Search**: Search both filenames and file content with detailed results display
-- **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, developer tools access
+- **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, markdown preview, developer tools access
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
@@ -77,6 +79,11 @@ This is an Electron-based memo application with ACE editor integration for markd
 - `get-settings`, `save-settings` - Editor settings management (includes theme presets, with real-time persistence)
 - `get-session`, `save-session` - Session state management (open tabs, active tab)
 - `select-folder` - Folder selection with immediate UI update (no restart required)
+
+**Preview Window**
+- `open-preview` - Open markdown preview in separate window
+- `update-preview` - Update preview window content
+- `preview-update` - Event to notify preview window of content changes
 
 **URL and External Actions**
 - `open-url` - Open URLs in default browser from editor context menu
@@ -154,6 +161,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Advanced Editor Features**
 - **URL Detection**: Automatically detects URLs in text, right-click to open in browser
 - **Text Selection Search**: Select text and right-click to search on Google
+- **Markdown Preview**: Separate window for live markdown preview with dark/light mode toggle
+- **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in buttons in top-right corner
+- **Preview Print Support**: Print preview with proper formatting, no scrollbars, word-wrap for long lines
+- **Preview Independence**: Preview window shows snapshot of content, doesn't change with tab switching
 - **Enhanced Search Box**: Properly positioned search interface with theme integration
 - **Emacs Keybinding Support**: Full Emacs-style search navigation with ^S (next), ^R (previous), ^G (close)
 - **Smart Search Focus**: Search field interactions automatically return focus to editor

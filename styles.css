@@ -402,8 +402,16 @@ body {
   cursor: pointer;
   padding: 5px 10px;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: background 0.2s, opacity 0.2s;
   color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon svg {
+  stroke: var(--text-color);
+  transition: stroke 0.2s;
 }
 
 .btn-icon:hover {
@@ -411,14 +419,20 @@ body {
   color: var(--text-color);
 }
 
+.btn-icon:hover svg {
+  stroke: var(--text-color);
+}
+
 .btn-flat {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  opacity: 0.7;
 }
 
 .btn-flat:hover {
   background: var(--border-color) !important;
+  opacity: 1;
 }
 
 /* タブバー */

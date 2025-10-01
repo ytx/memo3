@@ -35,7 +35,11 @@ contextBridge.exposeInMainWorld('api', {
   // URL and search
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
   searchGoogle: (searchText) => ipcRenderer.invoke('search-google', searchText),
-  
+
+  // プレビュー関連
+  openPreview: () => ipcRenderer.invoke('open-preview'),
+  updatePreview: (content) => ipcRenderer.invoke('update-preview', content),
+
   // メインプロセスからのイベント
   onNewMemo: (callback) => {
     ipcRenderer.on('new-memo', callback);
@@ -48,5 +52,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   onFilesUpdated: (callback) => {
     ipcRenderer.on('files-updated', callback);
+  },
+  onPreviewUpdate: (callback) => {
+    ipcRenderer.on('preview-update', callback);
   }
 });
