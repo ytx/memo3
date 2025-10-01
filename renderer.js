@@ -6,6 +6,7 @@ let rootFolder = null;
 let autoSaveTimers = {}; // 自動保存タイマー管理
 let lastOpenedFromFileList = null; // ファイル一覧から最後に開いたタブ
 let editorInteractions = {}; // エディタとのユーザーインタラクション追跡
+let imeComposing = {}; // IME変換中フラグ（タブIDごと）
 let settings = {
   keybinding: '',
   theme: 'ace/theme/monokai',
@@ -97,9 +98,12 @@ class TabManager {
       clearTimeout(autoSaveTimers[tabId]);
       delete autoSaveTimers[tabId];
     }
-    
+
     // インタラクション記録をクリア
     delete editorInteractions[tabId];
+
+    // IME変換フラグをクリア
+    delete imeComposing[tabId];
     
     // 最後に開いたファイルがこのタブだった場合はクリア
     if (lastOpenedFromFileList === tabId) {
@@ -668,11 +672,23 @@ function initEditor(tabId, containerId) {
   editor.on('focus', () => {
     editorInteractions[tabId] = true;
   });
-  
+
   editor.on('changeSelection', () => {
     editorInteractions[tabId] = true;
   });
-  
+
+  // IME変換状態の追跡
+  const textInput = editor.textInput.getElement();
+  textInput.addEventListener('compositionstart', () => {
+    imeComposing[tabId] = true;
+    console.log(`IME変換開始: tabId=${tabId}`);
+  });
+
+  textInput.addEventListener('compositionend', () => {
+    imeComposing[tabId] = false;
+    console.log(`IME変換終了: tabId=${tabId}`);
+  });
+
   // エディタクリック時に確実にフォーカス
   editor.container.addEventListener('mousedown', () => {
     setTimeout(() => {
@@ -1071,10 +1087,18 @@ function setupAutoSave(tabId) {
   if (autoSaveTimers[tabId]) {
     clearTimeout(autoSaveTimers[tabId]);
   }
-  
+
   // 5秒後に自動保存
   autoSaveTimers[tabId] = setTimeout(async () => {
     const tab = tabManager.tabs.find(t => t.id === tabId);
+
+    // IME変換中の場合は自動保存をスキップして再スケジュール
+    if (imeComposing[tabId]) {
+      console.log(`IME変換中のため自動保存をスキップ: ${tab?.file?.name}`);
+      setupAutoSave(tabId); // 再度タイマーを設定
+      return;
+    }
+
     if (tab && tab.isModified && tab.file) {
       const success = await saveFile(tabId);
       if (success) {

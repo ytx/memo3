@@ -108,6 +108,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 
 **Auto-Save and Change Detection**
 - **Timed Auto-Save**: Automatically saves files 5 seconds after the last edit
+- **IME-Safe Auto-Save**: Detects IME composition state (Japanese input) and defers auto-save until conversion completes
+- **Auto-Save Retry**: If IME conversion is in progress, reschedules auto-save to prevent character loss
 - **Change Detection**: Compares content before saving to prevent unnecessary file updates
 - **Close Auto-Save**: Automatically saves modified files when closing tabs
 - **Smart Closing**: Auto-closes unused tabs when opening new files from file list
@@ -195,6 +197,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 14. **Theme Configuration**: Settings → Select Theme 1 (e.g., Monokai) and Theme 2 (e.g., GitHub) → Save → Use 🎨 button to toggle between them
 15. **Theme Toggle Preservation**: Click 🎨 button multiple times → Theme switches between configured presets → Settings dialog shows original Theme 1 and Theme 2 values unchanged
 16. **External File Modification**: Open file in memo3 → Edit same file in external editor → Save in external editor → memo3 automatically reloads content while preserving cursor position and scroll location
+17. **IME-Safe Auto-Save**: Type Japanese text "こんにちは" → Start converting → Auto-save timer triggers → Save is deferred until conversion completes → Press Enter to confirm → Auto-save executes without losing characters
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)
