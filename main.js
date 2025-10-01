@@ -614,6 +614,14 @@ ipcMain.handle('update-preview', async (_, content) => {
   return { success: false };
 });
 
+ipcMain.handle('request-preview-reload', async () => {
+  if (previewWindow && !previewWindow.isDestroyed() && mainWindow) {
+    mainWindow.webContents.send('reload-preview-content');
+    return { success: true };
+  }
+  return { success: false };
+});
+
 // 開発者ツール
 ipcMain.handle('open-dev-tools', () => {
   if (mainWindow) {

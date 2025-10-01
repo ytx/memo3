@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('api', {
   // プレビュー関連
   openPreview: () => ipcRenderer.invoke('open-preview'),
   updatePreview: (content) => ipcRenderer.invoke('update-preview', content),
+  requestPreviewReload: () => ipcRenderer.invoke('request-preview-reload'),
 
   // メインプロセスからのイベント
   onNewMemo: (callback) => {
@@ -55,5 +56,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   onPreviewUpdate: (callback) => {
     ipcRenderer.on('preview-update', callback);
+  },
+  onReloadPreviewContent: (callback) => {
+    ipcRenderer.on('reload-preview-content', callback);
   }
 });

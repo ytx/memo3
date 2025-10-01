@@ -297,38 +297,47 @@ class TabManager {
   async restoreSession() {
     try {
       const session = await window.api.getSession();
-      
+
       if (!session.openTabs || session.openTabs.length === 0) {
         return; // セッションがない場合は何もしない
       }
-      
-      // タブを復元
+
+      // タブを復元（存在するファイルのみ）
+      const restoredTabs = [];
       for (const tabData of session.openTabs) {
-        if (tabData.filePath && files.find(f => f.path === tabData.filePath)) {
+        if (tabData.filePath) {
+          // ファイルの存在を確認（files配列で確認）
           const file = files.find(f => f.path === tabData.filePath);
-          const tabId = this.createTab(file);
-          
-          // ファイルを読み込んでエディタに設定
-          const result = await window.api.loadFile(file.path);
-          if (result.success && editors[tabId]) {
-            editors[tabId].setValue(result.content, -1);
-            // 初期タイトルを設定
-            tabManager.updateTabTitle(tabId, result.content || '');
+          if (file) {
+            // ファイル読み込みで実際に存在を確認
+            const result = await window.api.loadFile(file.path);
+            if (result.success) {
+              const tabId = this.createTab(file);
+              if (editors[tabId]) {
+                editors[tabId].setValue(result.content, -1);
+                // 初期タイトルを設定
+                tabManager.updateTabTitle(tabId, result.content || '');
+                restoredTabs.push({ tabId, filePath: file.path, originalId: tabData.id });
+              }
+            }
           }
         }
       }
-      
+
       // アクティブタブを復元
-      if (session.activeTabId && this.tabs.find(t => t.file && files.find(f => f.path === session.openTabs.find(o => o.id === session.activeTabId)?.filePath))) {
-        const activeTabData = session.openTabs.find(t => t.id === session.activeTabId);
-        if (activeTabData && activeTabData.filePath) {
-          const activeTab = this.tabs.find(t => t.file && t.file.path === activeTabData.filePath);
+      if (session.activeTabId) {
+        const activeTabInfo = restoredTabs.find(t => t.originalId === session.activeTabId);
+        if (activeTabInfo) {
+          const activeTab = this.tabs.find(t => t.id === activeTabInfo.tabId);
           if (activeTab) {
             this.switchToTab(activeTab.id);
           }
+        } else if (restoredTabs.length > 0) {
+          // 元のアクティブタブが存在しない場合は最初のタブをアクティブに
+          this.switchToTab(restoredTabs[0].tabId);
         }
       }
-      
+
     } catch (error) {
       console.error('Failed to restore session:', error);
     }
@@ -1280,6 +1289,18 @@ async function openPreview() {
   }
 }
 
+// プレビューの再読み込みリクエストを受信
+window.api.onReloadPreviewContent(() => {
+  const activeTab = tabManager.getActiveTab();
+  if (activeTab) {
+    const editor = editors[activeTab.id];
+    if (editor) {
+      const content = editor.getValue();
+      window.api.updatePreview(content);
+    }
+  }
+});
+
 // フォントサイズの縮小
 async function decreaseFontSize() {
   if (settings.fontSize > 10) {
@@ -1747,9 +1768,12 @@ async function renameFileFromContext() {
             tabManager.renderTabs();
             updateCurrentFilePath();
           }
-          
+
+          // セッションを保存してファイルパスの変更を反映
+          await saveSession();
+
           showStatus(`ファイル名を「${finalFileName}」に更新しました`);
-          
+
           // ファイル一覧を更新
           files = await window.api.getFiles();
           displayFiles();

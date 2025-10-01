@@ -237,5 +237,10 @@ document.getElementById('print-btn').addEventListener('click', () => {
   window.print();
 });
 
+// 再読み込み機能
+document.getElementById('reload-btn').addEventListener('click', () => {
+  window.api.requestPreviewReload();
+});
+
 // 初期化
 updateZoom();

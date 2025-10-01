@@ -83,7 +83,9 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Preview Window**
 - `open-preview` - Open markdown preview in separate window
 - `update-preview` - Update preview window content
+- `request-preview-reload` - Request to reload preview from current active tab
 - `preview-update` - Event to notify preview window of content changes
+- `reload-preview-content` - Event to request main window to send updated content
 
 **URL and External Actions**
 - `open-url` - Open URLs in default browser from editor context menu
@@ -123,9 +125,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Session Restoration**
 - **Complete State Persistence**: Saves all open tabs, active tab, and file states
 - **Automatic Restoration**: Restores session on app restart without user intervention
-- **File Validation**: Only restores tabs for files that still exist
+- **File Validation**: Only restores tabs for files that still exist on disk
+- **Rename Tracking**: Updates session immediately when files are renamed, ensuring correct restoration
 - **Content Restoration**: Reloads file content and maintains editor state
-- **Smart Recovery**: Handles missing files gracefully during restoration
+- **Smart Recovery**: Handles missing files gracefully during restoration, restores only existing files
 
 **Tab Management Enhancements**
 - **Drag-and-Drop Reordering**: Drag tabs to reorder them with visual feedback
@@ -162,7 +165,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **URL Detection**: Automatically detects URLs in text, right-click to open in browser
 - **Text Selection Search**: Select text and right-click to search on Google
 - **Markdown Preview**: Separate window for live markdown preview with dark/light mode toggle
-- **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in buttons in top-right corner
+- **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in, reload buttons in top-right corner
+- **Preview Reload**: Manually refresh preview content from current active tab
 - **Preview Rendering**: Proper hierarchy display with aligned headings, nested lists, and horizontal rules (----)
 - **Preview Print Support**: Print preview with proper formatting, no scrollbars, word-wrap for long lines
 - **Preview Independence**: Preview window shows snapshot of content, doesn't change with tab switching
