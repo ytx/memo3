@@ -1470,6 +1470,113 @@ function hideStatusContextMenu() {
   statusContextMenu.style.display = 'none';
 }
 
+// 箇条書きを追加する関数
+function addBulletPoints(editor, type) {
+  console.log('addBulletPoints called with type:', type);
+
+  if (!editor) {
+    console.error('Editor is null');
+    return;
+  }
+
+  const selection = editor.getSelectionRange();
+  const startRow = selection.start.row;
+  const endRow = selection.end.row;
+
+  console.log('Processing rows:', startRow, 'to', endRow);
+
+  // 全ての変更を1つの文字列として準備
+  const newLines = [];
+  for (let row = startRow; row <= endRow; row++) {
+    const line = editor.session.getLine(row);
+
+    // 先頭の空白文字を検出
+    const leadingWhitespace = line.match(/^(\s*)/)[0];
+    const textAfterWhitespace = line.substring(leadingWhitespace.length);
+
+    let bulletMark;
+    if (type === '-') {
+      // 箇条書き(-)を追加：先頭空白の後に "- " を挿入
+      bulletMark = '- ';
+    } else if (type === '1') {
+      // 箇条書き(1.)を追加：先頭空白の後に "1. " を挿入
+      bulletMark = '1. ';
+    }
+
+    newLines.push(leadingWhitespace + bulletMark + textAfterWhitespace);
+  }
+
+  // 選択範囲全体を一度に置換（これで1回のUndoになる）
+  const range = {
+    start: { row: startRow, column: 0 },
+    end: { row: endRow, column: editor.session.getLine(endRow).length }
+  };
+
+  editor.session.replace(range, newLines.join('\n'));
+
+  console.log('Bullet points added successfully');
+
+  // 選択範囲を更新
+  editor.selection.setRange({
+    start: { row: startRow, column: 0 },
+    end: { row: startRow + newLines.length - 1, column: newLines[newLines.length - 1].length }
+  });
+}
+
+// 箇条書きを削除する関数
+function removeBulletPoints(editor) {
+  console.log('removeBulletPoints called');
+
+  if (!editor) {
+    console.error('Editor is null');
+    return;
+  }
+
+  const selection = editor.getSelectionRange();
+  const startRow = selection.start.row;
+  const endRow = selection.end.row;
+
+  console.log('Processing rows:', startRow, 'to', endRow);
+
+  // 全ての変更を1つの文字列として準備
+  const newLines = [];
+  for (let row = startRow; row <= endRow; row++) {
+    const line = editor.session.getLine(row);
+
+    // 先頭の空白を保持しつつ、箇条書きマークを削除
+    const leadingWhitespace = line.match(/^(\s*)/)[0];
+    const afterWhitespace = line.substring(leadingWhitespace.length);
+
+    let newLine = afterWhitespace;
+    // "- " または "* " を削除
+    if (afterWhitespace.match(/^[-*]\s/)) {
+      newLine = afterWhitespace.replace(/^[-*]\s/, '');
+    }
+    // "1. " などの数字付き箇条書きを削除
+    else if (afterWhitespace.match(/^\d+\.\s/)) {
+      newLine = afterWhitespace.replace(/^\d+\.\s/, '');
+    }
+
+    newLines.push(leadingWhitespace + newLine);
+  }
+
+  // 選択範囲全体を一度に置換（これで1回のUndoになる）
+  const range = {
+    start: { row: startRow, column: 0 },
+    end: { row: endRow, column: editor.session.getLine(endRow).length }
+  };
+
+  editor.session.replace(range, newLines.join('\n'));
+
+  console.log('Bullet points removed successfully');
+
+  // 選択範囲を更新
+  editor.selection.setRange({
+    start: { row: startRow, column: 0 },
+    end: { row: startRow + newLines.length - 1, column: newLines[newLines.length - 1].length }
+  });
+}
+
 // エディタ用コンテキストメニューの表示
 function showEditorContextMenu(event, tabId) {
   event.preventDefault();
@@ -1612,6 +1719,28 @@ function showEditorContextMenu(event, tabId) {
         editor.execCommand('replace');
         hideEditorContextMenu();
       }
+    },
+    { separator: true },
+    {
+      text: '箇条書き(-)にする',
+      action: () => {
+        addBulletPoints(editor, '-');
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: '箇条書き(1)にする',
+      action: () => {
+        addBulletPoints(editor, '1');
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: '箇条書きをやめる',
+      action: () => {
+        removeBulletPoints(editor);
+        hideEditorContextMenu();
+      }
     }
   );
   
@@ -1642,8 +1771,11 @@ function showEditorContextMenu(event, tabId) {
         menuItem.style.backgroundColor = 'transparent';
         menuItem.style.color = 'var(--text-color)';
       });
-      
-      menuItem.addEventListener('click', item.action);
+
+      menuItem.addEventListener('click', (e) => {
+        e.stopPropagation(); // イベント伝播を停止
+        item.action();
+      });
       contextMenu.appendChild(menuItem);
     }
   });

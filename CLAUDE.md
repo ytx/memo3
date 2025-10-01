@@ -158,7 +158,12 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Context Menu System**
 - **File Context Menu**: Right-click files for "ファイル名更新" (filename update) and "削除" (delete)
 - **Status Bar Context Menu**: Right-click status bar for "開発者ツール" (developer tools)
-- **Editor Context Menu**: Right-click in editor for URL opening, Google search, and standard editing functions
+- **Editor Context Menu**: Right-click in editor for URL opening, Google search, standard editing functions, and bullet list operations
+- **Bullet List Operations**: Add/remove bullet points for selected lines
+  - "箇条書き(-)にする": Add "- " prefix to each selected line (preserves leading whitespace)
+  - "箇条書き(1)にする": Add "1. " prefix to each selected line (preserves leading whitespace)
+  - "箇条書きをやめる": Remove "- ", "* ", or "1. " prefixes from selected lines
+  - Full Undo/Redo support for all bullet operations
 - **Smart Positioning**: Context menus automatically adjust position to stay within screen bounds
 - **Filename Updates**: Auto-generates new filenames based on file content, preserves extensions
 - **Safety Confirmations**: Confirmation dialogs before file deletion
@@ -198,6 +203,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 15. **Theme Toggle Preservation**: Click 🎨 button multiple times → Theme switches between configured presets → Settings dialog shows original Theme 1 and Theme 2 values unchanged
 16. **External File Modification**: Open file in memo3 → Edit same file in external editor → Save in external editor → memo3 automatically reloads content while preserving cursor position and scroll location
 17. **IME-Safe Auto-Save**: Type Japanese text "こんにちは" → Start converting → Auto-save timer triggers → Save is deferred until conversion completes → Press Enter to confirm → Auto-save executes without losing characters
+18. **Bullet List Creation**: Select 3 lines of text → Right-click → "箇条書き(-)にする" → Each line gets "- " prefix → Ctrl+Z undoes all at once
+19. **Indented Bullet Lists**: Select lines with leading spaces "  item1\n  item2" → Right-click → "箇条書き(-)にする" → Results in "  - item1\n  - item2" (spaces preserved)
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)
