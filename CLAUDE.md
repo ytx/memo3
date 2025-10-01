@@ -26,6 +26,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Manages application lifecycle and window creation with standard title bar
 - Handles IPC communication with renderer process
 - Manages file-system based data persistence with chokidar file watching
+- Filters out temporary files (backup ~, swap .swp, hidden ., .DS_Store, .tmp)
 - Implements macOS-specific error handling for IMK (Input Method Kit) issues
 - Data is stored in:
   - User-selected root folder - All .md/.txt files (sorted by modification time, descending)
@@ -43,7 +44,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Context isolation is enabled, node integration is disabled
 
 ### Key Features
-- **File-System Management**: Select root folder, auto-scan .md/.txt files, real-time file watching
+- **File-System Management**: Select root folder, auto-scan .md/.txt files, real-time file watching, filters temporary files
 - **Multi-Tab Interface**: Open multiple files in tabs with drag-and-drop tab reordering
 - **Session Restoration**: Automatically restores open tabs and editor states on app restart
 - **Enhanced Search**: Search both filenames and file content with detailed results display
@@ -56,6 +57,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
+- **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
 
 ### IPC Communication Channels
 **File Management**
@@ -101,6 +103,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Close Auto-Save**: Automatically saves modified files when closing tabs
 - **Smart Closing**: Auto-closes unused tabs when opening new files from file list
 - **File List Updates**: Automatically updates file order when files are modified
+- **Temporary File Filtering**: Ignores editor backup files (~), swap files (.swp), hidden files (.), and system files (.DS_Store, .tmp)
 
 **Enhanced Search System**
 - **Dual Search Mode**: Search both filenames and file content simultaneously
@@ -175,6 +178,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 13. **Emacs Clipboard**: Select text → ^W (cut) or Alt+W (copy) → ^Y (yank) → Text transfers to/from system clipboard
 14. **Theme Configuration**: Settings → Select Theme 1 (e.g., Monokai) and Theme 2 (e.g., GitHub) → Save → Use 🎨 button to toggle between them
 15. **Theme Toggle Preservation**: Click 🎨 button multiple times → Theme switches between configured presets → Settings dialog shows original Theme 1 and Theme 2 values unchanged
+16. **External File Modification**: Open file in memo3 → Edit same file in external editor → Save in external editor → memo3 automatically reloads content while preserving cursor position and scroll location
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

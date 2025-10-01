@@ -123,10 +123,23 @@ async function scanFiles() {
       const items = await fs.readdir(dir);
       
       for (const item of items) {
+        // 一時ファイルやバックアップファイルを除外
+        if (item.startsWith('.') || item.endsWith('~') || item.includes('.swp') || item.includes('.tmp')) {
+          continue;
+        }
+
         const fullPath = path.join(dir, item);
         const relativeItemPath = path.join(relativePath, item);
-        const stats = await fs.stat(fullPath);
-        
+
+        let stats;
+        try {
+          stats = await fs.stat(fullPath);
+        } catch (error) {
+          // ファイルが存在しない場合（削除された、アクセスできないなど）はスキップ
+          console.log(`Skipping inaccessible file: ${fullPath}`);
+          continue;
+        }
+
         if (stats.isDirectory()) {
           await walkDir(fullPath, relativeItemPath);
         } else if (stats.isFile() && (item.endsWith('.md') || item.endsWith('.txt'))) {
@@ -178,15 +191,21 @@ function setupFileWatcher() {
   if (fileWatcher) {
     fileWatcher.close();
   }
-  
+
   if (!rootFolder) return;
-  
+
   fileWatcher = chokidar.watch(rootFolder, {
-    ignored: /(^|[\/\\])\../,
+    ignored: [
+      /(^|[\/\\])\../,  // 隠しファイル
+      /~$/,              // バックアップファイル
+      /\.swp$/,          // Vimスワップファイル
+      /\.tmp$/,          // 一時ファイル
+      /\.DS_Store$/      // macOS システムファイル
+    ],
     persistent: true,
     ignoreInitial: true
   });
-  
+
   fileWatcher
     .on('add', () => scanFiles())
     .on('change', () => scanFiles())

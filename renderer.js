@@ -1964,6 +1964,56 @@ function updateRootFolderPath() {
   }
 }
 
+// 外部で変更されたファイルを再読み込み
+async function reloadModifiedOpenFiles() {
+  if (!tabManager || !tabManager.tabs) return;
+
+  for (const tab of tabManager.tabs) {
+    if (!tab.file || !tab.file.path) continue;
+
+    try {
+      // ファイルの現在の内容を読み込む
+      const result = await window.api.loadFile(tab.file.path);
+      if (!result.success) continue;
+
+      const newContent = result.content;
+      const editor = editors[tab.id];
+      if (!editor) continue;
+
+      const currentContent = editor.getValue();
+
+      // 内容が変更されている場合のみ再読み込み
+      if (newContent !== currentContent) {
+        // カーソル位置とスクロール位置を保存
+        const cursorPosition = editor.getCursorPosition();
+        const scrollTop = editor.session.getScrollTop();
+        const scrollLeft = editor.session.getScrollLeft();
+
+        // 内容を更新
+        editor.setValue(newContent, -1); // -1 = カーソルを先頭に移動しない
+
+        // カーソル位置を復元
+        editor.moveCursorToPosition(cursorPosition);
+
+        // スクロール位置を復元
+        editor.session.setScrollTop(scrollTop);
+        editor.session.setScrollLeft(scrollLeft);
+
+        // タブのタイトルを更新
+        tabManager.updateTabTitle(tab.id, newContent);
+
+        // 変更フラグをクリア（外部変更なので未保存としない）
+        tab.isModified = false;
+        tabManager.renderTabs();
+
+        console.log(`Reloaded externally modified file: ${tab.file.name}`);
+      }
+    } catch (error) {
+      console.error(`Failed to reload file ${tab.file.path}:`, error);
+    }
+  }
+}
+
 // 初期化
 async function init() {
   // 設定の読み込み
@@ -2188,5 +2238,9 @@ window.api.onOpenSettings(() => showSettings());
 window.api.onFilesUpdated(async (_, updatedFiles) => {
   files = updatedFiles;
   displayFiles();
+
+  // 開いているタブのファイルが外部で変更されていないかチェック
+  await reloadModifiedOpenFiles();
+
   showStatus('ファイルリストを更新しました');
 });
