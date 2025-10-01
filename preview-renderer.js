@@ -36,27 +36,119 @@ function markdownToHtml(markdown) {
   // 画像
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
 
-  // 水平線
-  html = html.replace(/^---$/gm, '<hr>');
-  html = html.replace(/^\*\*\*$/gm, '<hr>');
-
   // 引用
   html = html.replace(/^>\s+(.*)$/gm, '<blockquote>$1</blockquote>');
 
-  // リスト（順序なし）
-  html = html.replace(/^\*\s+(.*)$/gm, '<li>$1</li>');
-  html = html.replace(/^-\s+(.*)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  // 水平線（リストの前に処理）
+  html = html.replace(/^----+$/gm, '<hr>');
+  html = html.replace(/^\*\*\*+$/gm, '<hr>');
 
-  // リスト（順序あり）
-  html = html.replace(/^\d+\.\s+(.*)$/gm, '<li>$1</li>');
+  // リスト処理（ネストを含む）
+  function buildList(lines, startIndex) {
+    const items = [];
+    let i = startIndex;
+    const firstMatch = lines[i].match(/^(\s*)[-*]\s+(.*)$/);
+    if (!firstMatch) return { html: '', nextIndex: startIndex };
+
+    const baseIndent = firstMatch[1].length;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const match = line.match(/^(\s*)[-*]\s+(.*)$/);
+
+      if (!match) break;
+
+      const indent = match[1].length;
+      const content = match[2];
+
+      if (indent < baseIndent) {
+        break;
+      } else if (indent === baseIndent) {
+        items.push(`<li>${content}</li>`);
+        i++;
+      } else {
+        // ネストされたリスト
+        const nested = buildList(lines, i);
+        if (items.length > 0) {
+          items[items.length - 1] = items[items.length - 1].replace('</li>', nested.html + '</li>');
+        }
+        i = nested.nextIndex;
+      }
+    }
+
+    return { html: `<ul>${items.join('')}</ul>`, nextIndex: i };
+  }
+
+  function buildOrderedList(lines, startIndex) {
+    const items = [];
+    let i = startIndex;
+    const firstMatch = lines[i].match(/^(\s*)\d+\.\s+(.*)$/);
+    if (!firstMatch) return { html: '', nextIndex: startIndex };
+
+    const baseIndent = firstMatch[1].length;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const match = line.match(/^(\s*)\d+\.\s+(.*)$/);
+
+      if (!match) break;
+
+      const indent = match[1].length;
+      const content = match[2];
+
+      if (indent < baseIndent) {
+        break;
+      } else if (indent === baseIndent) {
+        items.push(`<li>${content}</li>`);
+        i++;
+      } else {
+        // ネストされたリスト
+        const nested = buildOrderedList(lines, i);
+        if (items.length > 0) {
+          items[items.length - 1] = items[items.length - 1].replace('</li>', nested.html + '</li>');
+        }
+        i = nested.nextIndex;
+      }
+    }
+
+    return { html: `<ol>${items.join('')}</ol>`, nextIndex: i };
+  }
+
+  const lines = html.split('\n');
+  const processedLines = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // 順序なしリストの検出
+    if (line.match(/^(\s*)[-*]\s+(.*)$/)) {
+      const result = buildList(lines, i);
+      processedLines.push(result.html);
+      i = result.nextIndex;
+      continue;
+    }
+
+    // 順序ありリストの検出
+    if (line.match(/^(\s*)\d+\.\s+(.*)$/)) {
+      const result = buildOrderedList(lines, i);
+      processedLines.push(result.html);
+      i = result.nextIndex;
+      continue;
+    }
+
+    processedLines.push(line);
+    i++;
+  }
+
+  html = processedLines.join('\n');
 
   // 段落
-  const lines = html.split('\n');
+  const paragraphLines = html.split('\n');
   const processed = [];
   let inParagraph = false;
 
-  for (let line of lines) {
+  for (let line of paragraphLines) {
     const trimmed = line.trim();
 
     // 既にタグがある行はそのまま

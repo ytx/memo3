@@ -163,6 +163,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Text Selection Search**: Select text and right-click to search on Google
 - **Markdown Preview**: Separate window for live markdown preview with dark/light mode toggle
 - **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in buttons in top-right corner
+- **Preview Rendering**: Proper hierarchy display with aligned headings, nested lists, and horizontal rules (----)
 - **Preview Print Support**: Print preview with proper formatting, no scrollbars, word-wrap for long lines
 - **Preview Independence**: Preview window shows snapshot of content, doesn't change with tab switching
 - **Enhanced Search Box**: Properly positioned search interface with theme integration
