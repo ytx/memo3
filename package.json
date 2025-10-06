@@ -7,19 +7,70 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-packager . memo3 --platform=darwin --arch=x64 --out=dist/ --icon=icon.icns --app-bundle-id=com.memo3.app --overwrite",
-    "build-universal": "electron-packager . memo3 --platform=darwin --arch=universal --out=dist/ --icon=icon.icns --app-bundle-id=com.memo3.app --overwrite",
+    "build": "electron-builder --mac --universal",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["memo", "markdown", "editor", "electron"],
+  "keywords": [
+    "memo",
+    "markdown",
+    "editor",
+    "electron"
+  ],
   "author": "memo3",
   "license": "ISC",
   "devDependencies": {
     "electron": "^37.4.0",
-    "electron-packager": "^17.1.2"
+    "electron-builder": "^26.0.12"
   },
   "dependencies": {
     "ace-builds": "^1.43.2",
     "chokidar": "^4.0.3"
+  },
+  "build": {
+    "appId": "com.memo3.app",
+    "productName": "memo3",
+    "mac": {
+      "icon": "icon.icns",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "preview-renderer.js",
+      "index.html",
+      "preview.html",
+      "styles.css",
+      "icon.icns",
+      "!node_modules/ace-builds/**/*",
+      "node_modules/ace-builds/package.json",
+      "node_modules/ace-builds/src-min-noconflict/ace.js",
+      "node_modules/ace-builds/src-min-noconflict/mode-markdown.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-monokai.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-github.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-tomorrow.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-twilight.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-solarized_dark.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-solarized_light.js",
+      "node_modules/ace-builds/src-min-noconflict/theme-dracula.js",
+      "node_modules/ace-builds/src-min-noconflict/ext-searchbox.js",
+      "node_modules/ace-builds/src-min-noconflict/keybinding-emacs.js",
+      "node_modules/chokidar/**/*",
+      "!node_modules/chokidar/node_modules"
+    ],
+    "asar": true,
+    "asarUnpack": [],
+    "compression": "maximum",
+    "directories": {
+      "output": "dist"
+    }
   }
 }
