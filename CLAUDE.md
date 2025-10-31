@@ -12,6 +12,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm start` - Launch the Electron app in production mode
 - `npm run dev` - Launch the Electron app in development mode
 
+### Building the Application
+- `npm run build` - Build macOS Universal Binary (Intel + Apple Silicon)
+- `npm run build-all` - Build for all platforms (macOS arm64, macOS x64, Windows x64)
+- Build output is in `dist/` directory
+
 ### Development
 - No linting or test commands are currently configured
 - The application uses Electron 37.4.0, ACE editor 1.43.2, and chokidar 4.0.3

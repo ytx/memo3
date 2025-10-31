@@ -139,12 +139,17 @@ npm start
 
 ### アプリケーションのビルド
 ```bash
-# Intel Mac用
+# macOS Universal Binary（Intel + Apple Silicon）
 npm run build
 
-# Universal Binary（Intel + Apple Silicon）
-npm run build-universal
+# 全プラットフォーム（macOS arm64, macOS x64, Windows x64）
+npm run build-all
 ```
+
+ビルド結果は`dist/`ディレクトリに出力されます：
+- macOS: `memo3-{version}-arm64.dmg`, `memo3-{version}-x64.dmg`（build-allの場合）
+- macOS: `memo3-{version}-universal.dmg`（buildの場合）
+- Windows: `memo3 Setup {version}.exe`（build-allの場合のみ）
 
 ## アーキテクチャ
 
