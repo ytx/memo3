@@ -126,9 +126,11 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Enhanced Search System**
 - **Dual Search Mode**: Search both filenames and file content simultaneously
 - **Results Categorization**: Separate display for filename matches vs content matches
+- **Match Text Display**: Shows matched text snippets for each result
 - **Line Number Display**: Show line numbers for content matches
-- **Visual Indicators**: Color-coded match types (filename: blue, content: teal)
+- **Visual Indicators**: Color-coded match types (filename: green, content: white)
 - **Direct Navigation**: Click search results to open files directly
+- **Jump to Line**: Click content match to open file and scroll to specific line
 - **Clear Function**: Easy search reset with × button
 
 **Multiple Workspace Management**
@@ -183,6 +185,8 @@ This is an Electron-based memo application with ACE editor integration for markd
   - "箇条書き(-)にする": Add "- " prefix to each selected line (preserves leading whitespace)
   - "箇条書き(1)にする": Add "1. " prefix to each selected line (preserves leading whitespace)
   - "箇条書きをやめる": Remove "- ", "* ", or "1. " prefixes from selected lines
+  - **Tab Key Indent**: Press Tab on bullet list line to increase indentation (adds 2 spaces)
+  - **Shift+Tab Outdent**: Press Shift+Tab on bullet list line to decrease indentation (removes 2 spaces)
   - Full Undo/Redo support for all bullet operations
 - **Smart Positioning**: Context menus automatically adjust position to stay within screen bounds
 - **Filename Updates**: Auto-generates new filenames based on file content, preserves extensions
@@ -234,6 +238,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 26. **New Tab Keyboard Shortcut**: Press ⌘N (macOS only) → New tab opens with placeholder text → Immediately ready for typing
 27. **Empty State UI**: Close all tabs → Center of editor shows large "新しい文書を作成" button → Click button → New tab opens
 28. **Unified Button Colors**: New tab (+) button in tab bar matches workspace add (+) button color (blue)
+29. **Search with Line Jump**: Type "機能" in search box → Results show matched lines with "行 5" label → Click "行 5" → File opens and scrolls to line 5 with cursor positioned
+30. **Bullet List Indentation**: Type "- Item 1" → Press Enter → Type "Item 2" → Press Tab → Line indents to "  - Item 2" → Press Shift+Tab → Line outdents back to "- Item 2"
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

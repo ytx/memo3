@@ -369,7 +369,7 @@ function initEditor(tabId, containerId) {
   // キーバインドの設定
   if (settings.keybinding) {
     editor.setKeyboardHandler(settings.keybinding);
-    
+
     // Emacsキーバインドの場合、Ctrl+Sのコマンドを再度追加
     if (settings.keybinding === 'ace/keyboard/emacs') {
       setTimeout(() => {
@@ -387,7 +387,69 @@ function initEditor(tabId, containerId) {
       }, 100);
     }
   }
-  
+
+  // 箇条書きのインデント制御（Tab）
+  editor.commands.addCommand({
+    name: 'bulletIndent',
+    bindKey: { win: 'Tab', mac: 'Tab' },
+    exec: function(editor) {
+      const cursor = editor.getCursorPosition();
+      const line = editor.session.getLine(cursor.row);
+
+      // 箇条書き行かチェック（先頭空白の後に - や * や 1. などがある）
+      const bulletPattern = /^(\s*)([-*]|\d+\.)\s/;
+      const match = line.match(bulletPattern);
+
+      if (match) {
+        // 箇条書き行の場合、行の先頭に2スペースを追加
+        editor.session.indentRows(cursor.row, cursor.row, '  ');
+        return;
+      }
+
+      // 箇条書きでない場合は通常のタブ挿入
+      editor.indent();
+    }
+  });
+
+  // 箇条書きのアウトデント制御（Shift+Tab）
+  editor.commands.addCommand({
+    name: 'bulletOutdent',
+    bindKey: { win: 'Shift-Tab', mac: 'Shift-Tab' },
+    exec: function(editor) {
+      const cursor = editor.getCursorPosition();
+      const line = editor.session.getLine(cursor.row);
+
+      // 箇条書き行かチェック
+      const bulletPattern = /^(\s*)([-*]|\d+\.)\s/;
+      const match = line.match(bulletPattern);
+
+      if (match) {
+        // 箇条書き行の場合、先頭のインデントを削除（2スペースまたは1タブ）
+        const leadingSpaces = match[1];
+        if (leadingSpaces.length >= 2) {
+          // 2スペース削除
+          const newLine = line.substring(2);
+          editor.session.replace(
+            new ace.Range(cursor.row, 0, cursor.row, line.length),
+            newLine
+          );
+          return;
+        } else if (leadingSpaces.length === 1) {
+          // 1スペース削除
+          const newLine = line.substring(1);
+          editor.session.replace(
+            new ace.Range(cursor.row, 0, cursor.row, line.length),
+            newLine
+          );
+          return;
+        }
+      }
+
+      // 箇条書きでない場合、または既にインデントがない場合は通常のアウトデント
+      editor.blockOutdent();
+    }
+  });
+
   // 自動補完の有効化
   editor.setOptions({
     enableBasicAutocompletion: true,
@@ -1144,80 +1206,127 @@ async function searchFiles() {
 function displaySearchResults(results) {
   const searchResults = document.getElementById('search-results');
   searchResults.innerHTML = '';
-  
+
   if (results.length === 0) {
     searchResults.innerHTML = '<div style="padding: 20px; color: #969696; text-align: center;">検索結果が見つかりませんでした</div>';
     return;
   }
-  
-  // 重複を除去してファイルリスト形式で表示
-  const uniqueFiles = new Map();
-  
+
+  // 各検索結果を表示
   results.forEach(result => {
-    if (!uniqueFiles.has(result.file.path)) {
-      uniqueFiles.set(result.file.path, result.file);
-    }
-  });
-  
-  Array.from(uniqueFiles.values()).forEach(file => {
+    const file = result.file;
+    const matches = result.matches;
+
+    const resultContainer = document.createElement('div');
+    resultContainer.className = 'search-result-container';
+
     const fileItem = document.createElement('div');
-    fileItem.className = 'file-item';
-    
+    fileItem.className = 'file-item search-result-file';
+
     // ファイルタイプに応じてクラスを追加
     if (file.name.endsWith('.md')) {
       fileItem.classList.add('markdown');
     } else if (file.name.endsWith('.txt')) {
       fileItem.classList.add('text');
     }
-    
+
     const icon = document.createElement('div');
     icon.className = 'file-icon';
     icon.textContent = file.name.endsWith('.md') ? '📄' : '📝';
-    
+
     const fileInfo = document.createElement('div');
     fileInfo.className = 'file-info';
-    
+
     const title = document.createElement('div');
     title.className = 'file-title';
     title.textContent = file.title || file.name;
-    
+
     const name = document.createElement('div');
     name.className = 'file-name';
     name.textContent = file.name;
-    
+
     const modTime = document.createElement('div');
     modTime.className = 'file-mod-time';
     const date = new Date(file.modifiedTime);
-    
+
     // 常に年月日と時刻を表示
-    modTime.textContent = date.toLocaleString([], { 
+    modTime.textContent = date.toLocaleString([], {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      hour: '2-digit', 
+      hour: '2-digit',
       minute: '2-digit'
     });
-    
+
     fileInfo.appendChild(title);
     fileInfo.appendChild(name);
     fileInfo.appendChild(modTime);
-    
+
     fileItem.appendChild(icon);
     fileItem.appendChild(fileInfo);
-    
+
     // クリックイベント
     fileItem.addEventListener('click', () => {
       openFileFromSearch(file);
     });
-    
-    searchResults.appendChild(fileItem);
+
+    resultContainer.appendChild(fileItem);
+
+    // マッチした部分を表示
+    const matchesContainer = document.createElement('div');
+    matchesContainer.className = 'search-matches';
+
+    matches.forEach(match => {
+      const matchItem = document.createElement('div');
+      matchItem.className = 'search-match-item';
+
+      if (match.type === 'filename') {
+        matchItem.classList.add('match-filename');
+        matchItem.innerHTML = `<span class="match-type">ファイル名</span> ${escapeHtml(match.text)}`;
+        // ファイル名マッチはファイルを開くだけ
+        matchItem.addEventListener('click', () => {
+          openFileFromSearch(file);
+        });
+      } else {
+        matchItem.classList.add('match-content');
+        matchItem.innerHTML = `<span class="match-line-number">行 ${match.line}</span> ${escapeHtml(match.text)}`;
+        // コンテンツマッチは行番号を渡して開く
+        matchItem.addEventListener('click', () => {
+          openFileFromSearch(file, match.line);
+        });
+      }
+
+      matchesContainer.appendChild(matchItem);
+    });
+
+    resultContainer.appendChild(matchesContainer);
+    searchResults.appendChild(resultContainer);
   });
 }
 
+// HTMLエスケープ用ヘルパー関数
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // 検索結果からファイルを開く
-async function openFileFromSearch(file) {
+async function openFileFromSearch(file, lineNumber = null) {
   // 検索結果はそのままにしてファイルを開く
   await openFileInTab(file);
+
+  // 行番号が指定されている場合、その行にスクロール
+  if (lineNumber !== null && tabManager.activeTabId) {
+    const editor = editors[tabManager.activeTabId];
+    if (editor) {
+      // エディタが準備できるまで少し待つ
+      setTimeout(() => {
+        editor.gotoLine(lineNumber, 0, true); // 行番号、カラム、アニメーション有効
+        editor.focus();
+      }, 100);
+    }
+  }
 }
 
 // 検索をクリア
