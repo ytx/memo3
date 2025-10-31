@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "ace-builds": "^1.43.2",
-    "chokidar": "^4.0.3"
+    "chokidar": "^4.0.3",
+    "material-symbols": "^0.39.1"
   },
   "build": {
     "appId": "com.memo3.app",

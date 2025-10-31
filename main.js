@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, Menu, dialog, shell } = require('electron')
 const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
+const os = require('os');
+const crypto = require('crypto');
 
 // アプリケーション名を最初に設定
 app.setName('memo3');
@@ -21,6 +23,8 @@ let fileWatcher = null;
 let files = [];
 let workspaces = [];
 let activeWorkspace = null;
+let tagsData = null; // 現在のワークスペースのタグデータ
+const hostname = os.hostname();
 const MEMOS_FILE = path.join(app.getPath('userData'), 'memos.json');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const WORKSPACE_FILE = path.join(app.getPath('userData'), 'workspace.json');
@@ -142,6 +146,195 @@ async function saveSessions(sessions) {
     await fs.writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
   } catch (error) {
     console.error('Failed to save sessions:', error);
+  }
+}
+
+// ========================================
+// タグ管理機能
+// ========================================
+
+// UUID生成
+function generateUUID() {
+  return crypto.randomUUID();
+}
+
+// タグファイルのパスを取得
+function getTagsFilePath(workspacePath) {
+  if (!workspacePath) return null;
+  return path.join(workspacePath, `memo3-tags-${hostname}.json`);
+}
+
+// タグデータの初期化
+function createEmptyTagsData() {
+  return {
+    version: '1.0',
+    hostname: hostname,
+    tags: [],
+    fileTags: [],
+    tagLogs: [],
+    fileTagLogs: []
+  };
+}
+
+// ログから現在の状態を再構築
+function rebuildTagsFromLogs(tagsData) {
+  const tags = new Map();
+  const fileTags = new Map(); // key: "filePath|tagId", value: fileTag object
+
+  // タグログを時系列順にソート
+  const sortedTagLogs = [...tagsData.tagLogs].sort((a, b) =>
+    new Date(a.timestamp) - new Date(b.timestamp)
+  );
+
+  // タグログを再生
+  for (const log of sortedTagLogs) {
+    if (log.action === 'create') {
+      tags.set(log.tagId, {
+        id: log.tagId,
+        name: log.data.name,
+        color: log.data.color,
+        order: log.data.order !== undefined ? log.data.order : tags.size,
+        createdAt: log.timestamp,
+        updatedAt: log.timestamp
+      });
+    } else if (log.action === 'update') {
+      const tag = tags.get(log.tagId);
+      if (tag) {
+        if (log.data.name !== undefined) tag.name = log.data.name;
+        if (log.data.color !== undefined) tag.color = log.data.color;
+        if (log.data.order !== undefined) tag.order = log.data.order;
+        tag.updatedAt = log.timestamp;
+      }
+    } else if (log.action === 'delete') {
+      tags.delete(log.tagId);
+    }
+  }
+
+  // ファイルタグログを時系列順にソート
+  const sortedFileTagLogs = [...tagsData.fileTagLogs].sort((a, b) =>
+    new Date(a.timestamp) - new Date(b.timestamp)
+  );
+
+  // ファイルタグログを再生
+  for (const log of sortedFileTagLogs) {
+    const key = `${log.filePath}|${log.tagId}`;
+    if (log.action === 'add') {
+      // タグが存在する場合のみ追加
+      if (tags.has(log.tagId)) {
+        fileTags.set(key, {
+          filePath: log.filePath,
+          tagId: log.tagId,
+          createdAt: log.timestamp
+        });
+      }
+    } else if (log.action === 'remove') {
+      fileTags.delete(key);
+    }
+  }
+
+  return {
+    ...tagsData,
+    tags: Array.from(tags.values()).sort((a, b) => a.order - b.order),
+    fileTags: Array.from(fileTags.values())
+  };
+}
+
+// タグデータの読み込み
+async function loadTagsData(workspacePath) {
+  const tagsFilePath = getTagsFilePath(workspacePath);
+  if (!tagsFilePath) return createEmptyTagsData();
+
+  try {
+    const data = await fs.readFile(tagsFilePath, 'utf8');
+    const parsedData = JSON.parse(data);
+
+    // ログから現在の状態を再構築
+    return rebuildTagsFromLogs(parsedData);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // ファイルが存在しない場合は空のデータを返す
+      return createEmptyTagsData();
+    }
+    console.error('Failed to load tags data:', error);
+    return createEmptyTagsData();
+  }
+}
+
+// タグデータの保存
+async function saveTagsData(workspacePath, data) {
+  const tagsFilePath = getTagsFilePath(workspacePath);
+  if (!tagsFilePath) return;
+
+  try {
+    await fs.writeFile(tagsFilePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Failed to save tags data:', error);
+  }
+}
+
+// 複数ホストのタグデータをマージ
+async function mergeAllTagsData(workspacePath) {
+  if (!workspacePath) return createEmptyTagsData();
+
+  try {
+    // ワークスペース内のすべてのタグファイルを検索
+    const filesInWorkspace = await fs.readdir(workspacePath);
+    const tagFiles = filesInWorkspace.filter(f => f.startsWith('memo3-tags-') && f.endsWith('.json'));
+
+    if (tagFiles.length === 0) {
+      return createEmptyTagsData();
+    }
+
+    // すべてのタグファイルを読み込んでログをマージ
+    let allTagLogs = [];
+    let allFileTagLogs = [];
+
+    for (const tagFile of tagFiles) {
+      try {
+        const filePath = path.join(workspacePath, tagFile);
+        const data = await fs.readFile(filePath, 'utf8');
+        const parsedData = JSON.parse(data);
+
+        allTagLogs = allTagLogs.concat(parsedData.tagLogs || []);
+        allFileTagLogs = allFileTagLogs.concat(parsedData.fileTagLogs || []);
+      } catch (error) {
+        console.error(`Failed to read tag file ${tagFile}:`, error);
+      }
+    }
+
+    // 重複ログを除去（同じtimestamp+hostname+action+idの組み合わせ）
+    const uniqueTagLogs = Array.from(
+      new Map(
+        allTagLogs.map(log => [
+          `${log.timestamp}|${log.hostname}|${log.action}|${log.tagId}`,
+          log
+        ])
+      ).values()
+    );
+
+    const uniqueFileTagLogs = Array.from(
+      new Map(
+        allFileTagLogs.map(log => [
+          `${log.timestamp}|${log.hostname}|${log.action}|${log.filePath}|${log.tagId}`,
+          log
+        ])
+      ).values()
+    );
+
+    // マージ後のデータを再構築
+    const mergedData = {
+      version: '1.0',
+      hostname: hostname,
+      tags: [],
+      fileTags: [],
+      tagLogs: uniqueTagLogs,
+      fileTagLogs: uniqueFileTagLogs
+    };
+
+    return rebuildTagsFromLogs(mergedData);
+  } catch (error) {
+    console.error('Failed to merge tags data:', error);
+    return createEmptyTagsData();
   }
 }
 
@@ -967,6 +1160,9 @@ ipcMain.handle('switch-workspace', async (_, workspacePath) => {
     activeWorkspace = workspacePath;
     rootFolder = workspacePath;
 
+    // タグデータをリセット（次回getTags()で新しいワークスペースのデータを読み込む）
+    tagsData = null;
+
     await saveWorkspaces();
     await scanFiles();
     setupFileWatcher();
@@ -1073,6 +1269,208 @@ ipcMain.handle('request-preview-reload', async () => {
     return { success: true };
   }
   return { success: false };
+});
+
+// タグ管理 IPC handlers
+ipcMain.handle('get-tags', async () => {
+  if (!tagsData) {
+    tagsData = await mergeAllTagsData(rootFolder);
+  }
+  console.log('[get-tags] Returning:', {
+    tagsCount: tagsData.tags.length,
+    fileTagsCount: tagsData.fileTags.length,
+    fileTags: tagsData.fileTags
+  });
+  return {
+    tags: tagsData.tags,
+    fileTags: tagsData.fileTags
+  };
+});
+
+ipcMain.handle('create-tag', async (_, tagData) => {
+  try {
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+    }
+
+    const tagId = generateUUID();
+    const timestamp = new Date().toISOString();
+
+    // ログに追加
+    const log = {
+      action: 'create',
+      tagId: tagId,
+      data: {
+        name: tagData.name,
+        color: tagData.color,
+        order: tagData.order !== undefined ? tagData.order : tagsData.tags.length
+      },
+      timestamp: timestamp,
+      hostname: hostname
+    };
+
+    tagsData.tagLogs.push(log);
+
+    // 現在の状態を再構築
+    tagsData = rebuildTagsFromLogs(tagsData);
+
+    // 保存
+    await saveTagsData(rootFolder, tagsData);
+
+    return { success: true, tagId: tagId };
+  } catch (error) {
+    console.error('Failed to create tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('update-tag', async (_, tagId, updates) => {
+  try {
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    // ログに追加
+    const log = {
+      action: 'update',
+      tagId: tagId,
+      data: updates,
+      timestamp: timestamp,
+      hostname: hostname
+    };
+
+    tagsData.tagLogs.push(log);
+
+    // 現在の状態を再構築
+    tagsData = rebuildTagsFromLogs(tagsData);
+
+    // 保存
+    await saveTagsData(rootFolder, tagsData);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-tag', async (_, tagId) => {
+  try {
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    // ログに追加
+    const log = {
+      action: 'delete',
+      tagId: tagId,
+      timestamp: timestamp,
+      hostname: hostname
+    };
+
+    tagsData.tagLogs.push(log);
+
+    // 現在の状態を再構築
+    tagsData = rebuildTagsFromLogs(tagsData);
+
+    // 保存
+    await saveTagsData(rootFolder, tagsData);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('add-file-tag', async (_, filePath, tagId) => {
+  try {
+    console.log('[add-file-tag] Called with:', { filePath, tagId, rootFolder });
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+      console.log('[add-file-tag] Loaded tagsData:', tagsData);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    // ログに追加
+    const log = {
+      action: 'add',
+      filePath: filePath,
+      tagId: tagId,
+      timestamp: timestamp,
+      hostname: hostname
+    };
+
+    tagsData.fileTagLogs.push(log);
+    console.log('[add-file-tag] Added log:', log);
+
+    // 現在の状態を再構築
+    tagsData = rebuildTagsFromLogs(tagsData);
+    console.log('[add-file-tag] After rebuild, fileTags:', tagsData.fileTags);
+
+    // 保存
+    await saveTagsData(rootFolder, tagsData);
+    console.log('[add-file-tag] Saved to file');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to add file tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('remove-file-tag', async (_, filePath, tagId) => {
+  try {
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    // ログに追加
+    const log = {
+      action: 'remove',
+      filePath: filePath,
+      tagId: tagId,
+      timestamp: timestamp,
+      hostname: hostname
+    };
+
+    tagsData.fileTagLogs.push(log);
+
+    // 現在の状態を再構築
+    tagsData = rebuildTagsFromLogs(tagsData);
+
+    // 保存
+    await saveTagsData(rootFolder, tagsData);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to remove file tag:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-file-tags', async (_, filePath) => {
+  try {
+    if (!tagsData) {
+      tagsData = await mergeAllTagsData(rootFolder);
+    }
+
+    const fileTagRelations = tagsData.fileTags.filter(ft => ft.filePath === filePath);
+    const tagIds = fileTagRelations.map(ft => ft.tagId);
+    const tags = tagsData.tags.filter(tag => tagIds.includes(tag.id));
+
+    return { success: true, tags: tags };
+  } catch (error) {
+    console.error('Failed to get file tags:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // 開発者ツール

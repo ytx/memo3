@@ -7,6 +7,32 @@ let autoSaveTimers = {}; // 自動保存タイマー管理
 let lastOpenedFromFileList = null; // ファイル一覧から最後に開いたタブ
 let editorInteractions = {}; // エディタとのユーザーインタラクション追跡
 let imeComposing = {}; // IME変換中フラグ（タブIDごと）
+
+// タグ管理
+let tags = []; // 全タグリスト
+let fileTags = []; // ファイルとタグの関連リスト
+let tagFilterStatus = {}; // タグフィルターの状態 { tagId: 'show' | 'hide' | 'none' }
+let isTagFilterVisible = false; // タグフィルターの表示状態
+
+// タグカラーパレット（16色）
+const TAG_COLOR_PALETTE = [
+  '#e53935', // 赤
+  '#d81b60', // ピンク
+  '#8e24aa', // 紫
+  '#5e35b1', // 深紫
+  '#3949ab', // 藍
+  '#1e88e5', // 青
+  '#039be5', // 水色
+  '#00acc1', // シアン
+  '#00897b', // ティール
+  '#43a047', // 緑
+  '#7cb342', // ライムグリーン
+  '#c0ca33', // ライム
+  '#fdd835', // 黄
+  '#ffb300', // アンバー
+  '#fb8c00', // オレンジ
+  '#6d4c41'  // 茶
+];
 let settings = {
   keybinding: '',
   theme: 'ace/theme/monokai',
@@ -791,9 +817,9 @@ function updateFileStatus() {
 async function displayFiles() {
   const fileList = document.getElementById('file-list');
   fileList.innerHTML = '';
-  
-  // 全ファイルを表示
-  const filteredFiles = files;
+
+  // タグフィルターを適用
+  const filteredFiles = files.filter(file => fileMatchesTagFilter(file));
   
   filteredFiles.forEach(file => {
     const fileItem = document.createElement('div');
@@ -809,17 +835,66 @@ async function displayFiles() {
     const icon = document.createElement('div');
     icon.className = 'file-icon';
     icon.textContent = file.name.endsWith('.md') ? '📄' : '📝';
-    
+
     const fileInfo = document.createElement('div');
     fileInfo.className = 'file-info';
-    
+
     const title = document.createElement('div');
     title.className = 'file-title';
     title.textContent = file.title || file.name;
-    
+
     const name = document.createElement('div');
     name.className = 'file-name';
     name.textContent = file.name;
+
+    // タグアイコンを追加（タグがある場合のみ）
+    const fileTagIds = fileTags.filter(ft => ft.filePath === file.name).map(ft => ft.tagId);
+    if (fileTagIds.length > 0) {
+      const tagIcon = document.createElement('span');
+      tagIcon.className = 'file-tag-icon material-symbols-outlined';
+      tagIcon.textContent = 'sell';
+
+      // ツールチップを作成
+      const tooltip = document.createElement('div');
+      tooltip.className = 'file-tag-tooltip';
+
+      fileTagIds.forEach(tagId => {
+        const tag = tags.find(t => t.id === tagId);
+        if (tag) {
+          const tagSpan = document.createElement('span');
+          tagSpan.className = 'file-tag-tooltip-tag';
+          tagSpan.textContent = tag.name;
+          tagSpan.style.backgroundColor = tag.color;
+          tagSpan.style.color = 'white';
+          tooltip.appendChild(tagSpan);
+        }
+      });
+
+      tagIcon.appendChild(tooltip);
+
+      // ツールチップの位置を動的に調整
+      tagIcon.addEventListener('mouseenter', (e) => {
+        const iconRect = tagIcon.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        // アイコンの右側に表示（画面外に出ないように調整）
+        let left = iconRect.right + 5;
+        let top = iconRect.top;
+
+        if (left + tooltipRect.width > window.innerWidth) {
+          left = iconRect.left - tooltipRect.width - 5;
+        }
+
+        if (top + tooltipRect.height > window.innerHeight) {
+          top = window.innerHeight - tooltipRect.height - 5;
+        }
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      });
+
+      name.appendChild(tagIcon);
+    }
     
     const modTime = document.createElement('div');
     modTime.className = 'file-mod-time';
@@ -1207,13 +1282,16 @@ function displaySearchResults(results) {
   const searchResults = document.getElementById('search-results');
   searchResults.innerHTML = '';
 
-  if (results.length === 0) {
+  // タグフィルターを適用
+  const filteredResults = results.filter(result => fileMatchesTagFilter(result.file));
+
+  if (filteredResults.length === 0) {
     searchResults.innerHTML = '<div style="padding: 20px; color: #969696; text-align: center;">検索結果が見つかりませんでした</div>';
     return;
   }
 
   // 各検索結果を表示
-  results.forEach(result => {
+  filteredResults.forEach(result => {
     const file = result.file;
     const matches = result.matches;
 
@@ -2100,6 +2178,20 @@ async function deleteFileFromContext() {
   hideContextMenu();
 }
 
+// タグ編集（右クリックから）
+async function editTagsFromContext() {
+  if (!currentContextFile) {
+    console.error('currentContextFile is null');
+    showStatus('ファイルが選択されていません');
+    return;
+  }
+
+  // hideContextMenu()の前にファイルを保存（hideContextMenuでcurrentContextFileがnullになるため）
+  const file = currentContextFile;
+  hideContextMenu();
+  await openTagDialog(file);
+}
+
 // ステータス表示
 function showStatus(message) {
   const statusText = document.getElementById('status-text');
@@ -2372,8 +2464,14 @@ async function init() {
   updateFileStatus();
   updateCurrentFilePath();
 
+  // タグデータを読み込み
+  await loadTags();
+
   // セッションを復元
   await tabManager.restoreSession();
+
+  // タグフィルター状態を復元
+  await restoreTagFilterFromSession();
 
   // 空状態を更新
   updateEmptyState();
@@ -2428,17 +2526,53 @@ document.addEventListener('DOMContentLoaded', () => {
   // 検索ボックス
   document.getElementById('search-input').addEventListener('input', searchFiles);
   document.getElementById('clear-search-btn').addEventListener('click', clearSearch);
-  
+
+  // タグフィルター
+  document.getElementById('toggle-tags-btn').addEventListener('click', toggleTagFilter);
+
   // コンテキストメニュー
   document.getElementById('context-rename').addEventListener('click', renameFileFromContext);
   document.getElementById('context-delete').addEventListener('click', deleteFileFromContext);
-  
+  document.getElementById('context-edit-tags').addEventListener('click', editTagsFromContext);
+
+  // タグダイアログ
+  document.getElementById('tag-dialog-close-btn').addEventListener('click', closeTagDialog);
+
+  // タグ検索ボックス
+  document.getElementById('tag-search-input').addEventListener('input', (e) => {
+    tagSearchQuery = e.target.value;
+    renderTagFlowArea();
+  });
+
+  document.getElementById('tag-search-clear-btn').addEventListener('click', () => {
+    document.getElementById('tag-search-input').value = '';
+    tagSearchQuery = '';
+    renderTagFlowArea();
+  });
+
+  // タグ検索ボックスでEnterキーで新規作成
+  document.getElementById('tag-search-input').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const name = tagSearchQuery.trim();
+      if (name && !tags.find(t => t.name === name)) {
+        await createTagFromSearch(name);
+      }
+    }
+  });
+
+  // タグ編集ダイアログ
+  document.getElementById('edit-tag-save-btn').addEventListener('click', saveEditTag);
+  document.getElementById('edit-tag-cancel-btn').addEventListener('click', closeEditTagDialog);
+  document.getElementById('edit-tag-name-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') saveEditTag();
+  });
+
   // ステータスバー用コンテキストメニュー
   document.getElementById('status-devtools').addEventListener('click', openDevToolsFromStatusContext);
-  
+
   // タブ用コンテキストメニュー
   document.getElementById('tab-close-all').addEventListener('click', closeAllTabsFromContext);
-  
+
   // ステータスバーの右クリック
   document.querySelector('.status-bar').addEventListener('contextmenu', showStatusContextMenu);
   
@@ -2592,7 +2726,6 @@ async function initWorkspaceSelector() {
 
   // イベントリスナー設定
   document.getElementById('workspace-current-btn').addEventListener('click', toggleWorkspaceMenu);
-  document.getElementById('add-workspace-btn').addEventListener('click', addWorkspace);
 
   // メニューの外をクリックしたら閉じる
   document.addEventListener('click', (e) => {
@@ -2720,15 +2853,6 @@ function renderWorkspaceMenu(workspaces, activeWorkspace) {
   const menu = document.getElementById('workspace-menu');
   menu.innerHTML = '';
 
-  if (workspaces.length === 0) {
-    const emptyItem = document.createElement('div');
-    emptyItem.className = 'workspace-item';
-    emptyItem.style.color = 'var(--text-secondary-color)';
-    emptyItem.textContent = 'ワークスペースがありません';
-    menu.appendChild(emptyItem);
-    return;
-  }
-
   workspaces.forEach(workspace => {
     const item = document.createElement('div');
     item.className = 'workspace-item';
@@ -2762,6 +2886,23 @@ function renderWorkspaceMenu(workspaces, activeWorkspace) {
 
     menu.appendChild(item);
   });
+
+  // 区切り線を追加
+  if (workspaces.length > 0) {
+    const separator = document.createElement('div');
+    separator.className = 'workspace-separator';
+    menu.appendChild(separator);
+  }
+
+  // 「追加する」オプションを追加
+  const addItem = document.createElement('div');
+  addItem.className = 'workspace-item workspace-add-item';
+  addItem.textContent = '追加する';
+  addItem.onclick = async () => {
+    await addWorkspace();
+  };
+
+  menu.appendChild(addItem);
 }
 
 function toggleWorkspaceMenu() {
@@ -2845,6 +2986,13 @@ async function switchWorkspace(workspacePath) {
       files = await window.api.getFiles();
       rootFolder = await window.api.getRootFolder();
       updateRootFolderPath();
+
+      // タグデータを再読み込み
+      await loadTags();
+
+      // タグフィルター状態を復元
+      await restoreTagFilterFromSession();
+
       displayFiles();
 
       // 新しいワークスペースのセッションを復元
@@ -2900,5 +3048,580 @@ async function removeWorkspace(workspacePath) {
   } catch (error) {
     console.error('Failed to remove workspace:', error);
     showStatus('ワークスペースの削除に失敗しました');
+  }
+}
+
+// ========================================
+// タグ管理機能
+// ========================================
+
+// タグデータの読み込み
+async function loadTags() {
+  try {
+    const result = await window.api.getTags();
+    tags = result.tags || [];
+    fileTags = result.fileTags || [];
+
+    // タグフィルター状態を初期化（セッションから復元する場合もある）
+    tags.forEach(tag => {
+      if (tagFilterStatus[tag.id] === undefined) {
+        tagFilterStatus[tag.id] = 'none';
+      }
+    });
+
+    renderTagList();
+    updateTagFilterButton();
+  } catch (error) {
+    console.error('Failed to load tags:', error);
+  }
+}
+
+// タグリストの表示
+function renderTagList() {
+  const tagList = document.getElementById('tag-list');
+  tagList.innerHTML = '';
+
+  if (tags.length === 0) {
+    tagList.innerHTML = '<div style="padding: 15px; color: #969696; text-align: center; font-size: 12px;">タグがありません</div>';
+    return;
+  }
+
+  tags.forEach(tag => {
+    const tagItem = document.createElement('div');
+    tagItem.className = 'tag-item';
+
+    const status = tagFilterStatus[tag.id] || 'none';
+    tagItem.classList.add(`status-${status}`);
+
+    // 色インジケーター
+    const colorDiv = document.createElement('div');
+    colorDiv.className = 'tag-item-color';
+    colorDiv.style.backgroundColor = tag.color;
+
+    // タグ名
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'tag-item-name';
+    nameDiv.textContent = tag.name;
+
+    // ファイル数
+    const count = fileTags.filter(ft => ft.tagId === tag.id).length;
+    const countDiv = document.createElement('div');
+    countDiv.className = 'tag-item-count';
+    countDiv.textContent = `(${count})`;
+
+    tagItem.appendChild(colorDiv);
+    tagItem.appendChild(nameDiv);
+    tagItem.appendChild(countDiv);
+
+    // クリックイベント: ステータスを切り替え
+    tagItem.addEventListener('click', () => {
+      cycleTagStatus(tag.id);
+    });
+
+    tagList.appendChild(tagItem);
+  });
+}
+
+// タグフィルターの開閉
+function toggleTagFilter() {
+  const tagFilter = document.getElementById('tag-filter');
+  isTagFilterVisible = !isTagFilterVisible;
+
+  if (isTagFilterVisible) {
+    tagFilter.style.display = 'block';
+  } else {
+    tagFilter.style.display = 'none';
+  }
+
+  updateTagFilterButton();
+}
+
+// タグフィルターボタンの表示を更新
+function updateTagFilterButton() {
+  const button = document.getElementById('toggle-tags-btn');
+
+  // アクティブなフィルターがあるかチェック
+  const hasActiveFilter = Object.values(tagFilterStatus).some(status => status !== 'none');
+
+  if (hasActiveFilter) {
+    button.classList.add('active');
+  } else {
+    button.classList.remove('active');
+  }
+}
+
+// タグステータスを3状態でサイクル
+function cycleTagStatus(tagId) {
+  const currentStatus = tagFilterStatus[tagId] || 'none';
+
+  // none → show → hide → none
+  if (currentStatus === 'none') {
+    tagFilterStatus[tagId] = 'show';
+  } else if (currentStatus === 'show') {
+    tagFilterStatus[tagId] = 'hide';
+  } else {
+    tagFilterStatus[tagId] = 'none';
+  }
+
+  renderTagList();
+  updateTagFilterButton();
+  applyTagFilter();
+
+  // セッションに保存
+  saveTagFilterToSession();
+}
+
+// タグフィルターを適用
+function applyTagFilter() {
+  // 検索がアクティブな場合は検索結果を再表示
+  const searchQuery = document.getElementById('search-input').value.trim();
+  if (searchQuery) {
+    searchFiles();
+  } else {
+    displayFiles();
+  }
+}
+
+// タグフィルター状態をセッションに保存
+async function saveTagFilterToSession() {
+  try {
+    const session = await window.api.getSession();
+    session.tagFilterStatus = tagFilterStatus;
+    await window.api.saveSession(session);
+  } catch (error) {
+    console.error('Failed to save tag filter to session:', error);
+  }
+}
+
+// セッションからタグフィルター状態を復元
+async function restoreTagFilterFromSession() {
+  try {
+    const session = await window.api.getSession();
+    if (session.tagFilterStatus) {
+      tagFilterStatus = session.tagFilterStatus;
+    }
+    renderTagList();
+    updateTagFilterButton();
+  } catch (error) {
+    console.error('Failed to restore tag filter from session:', error);
+  }
+}
+
+// ファイルがタグフィルターに一致するかチェック
+function fileMatchesTagFilter(file) {
+  const showTags = Object.keys(tagFilterStatus).filter(tagId => tagFilterStatus[tagId] === 'show');
+  const hideTags = Object.keys(tagFilterStatus).filter(tagId => tagFilterStatus[tagId] === 'hide');
+
+  // フィルターが何も設定されていない場合は全て表示
+  if (showTags.length === 0 && hideTags.length === 0) {
+    return true;
+  }
+
+  // このファイルが持つタグ
+  const fileTagIds = fileTags
+    .filter(ft => ft.filePath === file.name)
+    .map(ft => ft.tagId);
+
+  // 非表示タグチェック（優先）
+  if (hideTags.length > 0) {
+    const hasHideTag = hideTags.some(tagId => fileTagIds.includes(tagId));
+    if (hasHideTag) {
+      return false;
+    }
+  }
+
+  // 表示タグチェック
+  if (showTags.length > 0) {
+    const hasShowTag = showTags.some(tagId => fileTagIds.includes(tagId));
+    return hasShowTag;
+  }
+
+  return true;
+}
+
+// ========================================
+// タグダイアログ管理
+// ========================================
+
+let currentTagDialogFile = null; // 現在タグ編集中のファイル
+let tagSearchQuery = ''; // タグ検索クエリ
+
+// タグダイアログを開く
+async function openTagDialog(file) {
+  console.log('[openTagDialog] Opening for file:', file);
+  currentTagDialogFile = file;
+
+  // タグデータを再読み込み
+  await loadTags();
+  console.log('[openTagDialog] After loadTags, fileTags:', fileTags);
+
+  // ダイアログを表示
+  const dialog = document.getElementById('tag-dialog');
+  dialog.classList.remove('hidden');
+
+  // ファイル名を表示
+  const fileInfo = document.getElementById('tag-dialog-file-info');
+  fileInfo.textContent = `ファイル: ${file.title || file.name}`;
+
+  // 検索ボックスをクリア
+  const searchInput = document.getElementById('tag-search-input');
+  searchInput.value = '';
+  tagSearchQuery = '';
+
+  // タグを描画
+  renderTagFlowArea();
+}
+
+// タグフローエリアを描画
+function renderTagFlowArea() {
+  const flowArea = document.getElementById('tag-flow-area');
+  flowArea.innerHTML = '';
+
+  // 検索クエリでフィルタ
+  const filteredTags = tags.filter(tag =>
+    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+  );
+
+  if (filteredTags.length === 0) {
+    flowArea.innerHTML = '<div style="padding: 20px; text-align: center; color: #969696; font-size: 12px;">タグがありません</div>';
+    return;
+  }
+
+  filteredTags.forEach((tag) => {
+    const badge = document.createElement('div');
+    badge.className = 'tag-badge-item';
+    badge.dataset.tagId = tag.id;
+    badge.textContent = tag.name;
+
+    // 割り当て済みかチェック
+    const isAssigned = isTagAssignedToFile(tag.id);
+    if (isAssigned) {
+      badge.classList.add('assigned');
+      badge.style.backgroundColor = tag.color;
+    }
+
+    // 左クリック：トグル
+    badge.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleTagAssignment(tag.id);
+    });
+
+    // 右クリック：編集メニュー
+    badge.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[contextmenu] Tag:', tag.name);
+      showTagEditMenu(e, tag);
+    });
+
+    flowArea.appendChild(badge);
+  });
+}
+
+// タグがファイルに割り当てられているかチェック
+function isTagAssignedToFile(tagId) {
+  if (!currentTagDialogFile) return false;
+  return fileTags.some(ft =>
+    ft.filePath === currentTagDialogFile.name && ft.tagId === tagId
+  );
+}
+
+// タグの割り当てをトグル
+async function toggleTagAssignment(tagId) {
+  const isAssigned = isTagAssignedToFile(tagId);
+  if (isAssigned) {
+    await unassignTagFromFile(tagId);
+  } else {
+    await assignTagToFile(tagId);
+  }
+}
+
+// タグをファイルに割り当て
+async function assignTagToFile(tagId) {
+  if (!currentTagDialogFile) return;
+  try {
+    const result = await window.api.addFileTag(currentTagDialogFile.name, tagId);
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      displayFiles();
+    }
+  } catch (error) {
+    console.error('Failed to assign tag:', error);
+  }
+}
+
+// タグをファイルから解除
+async function unassignTagFromFile(tagId) {
+  if (!currentTagDialogFile) return;
+  try {
+    const result = await window.api.removeFileTag(currentTagDialogFile.name, tagId);
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      displayFiles();
+    }
+  } catch (error) {
+    console.error('Failed to unassign tag:', error);
+  }
+}
+
+// タグ名を更新
+async function updateTagName(tagId, newName) {
+  try {
+    const result = await window.api.updateTag(tagId, { name: newName });
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      renderTagList();
+      displayFiles();
+    }
+  } catch (error) {
+    console.error('Failed to update tag name:', error);
+  }
+}
+
+// タグの色を更新
+async function updateTagColor(tagId, newColor) {
+  try {
+    const result = await window.api.updateTag(tagId, { color: newColor });
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      renderTagList();
+      displayFiles();
+    }
+  } catch (error) {
+    console.error('Failed to update tag color:', error);
+  }
+}
+
+// タグを削除
+async function deleteTag(tagId) {
+  if (!confirm('このタグを削除しますか？')) return;
+  try {
+    const result = await window.api.deleteTag(tagId);
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      renderTagList();
+      displayFiles();
+    }
+  } catch (error) {
+    console.error('Failed to delete tag:', error);
+  }
+}
+
+// 検索ボックスから新規タグ作成
+async function createTagFromSearch(name) {
+  const color = TAG_COLOR_PALETTE[Math.floor(Math.random() * TAG_COLOR_PALETTE.length)];
+
+  try {
+    const result = await window.api.createTag({
+      name: name,
+      color: color,
+      order: tags.length
+    });
+
+    if (result.success) {
+      await loadTags();
+      renderTagFlowArea();
+      renderTagList();
+      document.getElementById('tag-search-input').value = '';
+      tagSearchQuery = '';
+    }
+  } catch (error) {
+    console.error('Failed to create tag:', error);
+  }
+}
+
+// 編集中のタグID
+let editingTagId = null;
+
+// タグ編集メニューを表示（右クリック）
+function showTagEditMenu(event, tag) {
+  console.log('[showTagEditMenu] Called for tag:', tag.name);
+
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.position = 'fixed';
+  menu.style.display = 'block';
+  menu.style.zIndex = '10000';
+
+  // 編集
+  const editItem = document.createElement('div');
+  editItem.className = 'context-menu-item';
+  editItem.textContent = '編集';
+  editItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openEditTagDialog(tag);
+    if (document.body.contains(menu)) {
+      document.body.removeChild(menu);
+    }
+  });
+
+  // 削除
+  const deleteItem = document.createElement('div');
+  deleteItem.className = 'context-menu-item danger';
+  deleteItem.textContent = '削除';
+  deleteItem.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await deleteTag(tag.id);
+    if (document.body.contains(menu)) {
+      document.body.removeChild(menu);
+    }
+  });
+
+  menu.appendChild(editItem);
+  menu.appendChild(deleteItem);
+
+  document.body.appendChild(menu);
+
+  // 位置を調整（画面外に出ないように）
+  const menuRect = menu.getBoundingClientRect();
+  let left = event.clientX;
+  let top = event.clientY;
+
+  if (left + menuRect.width > window.innerWidth) {
+    left = window.innerWidth - menuRect.width - 10;
+  }
+  if (top + menuRect.height > window.innerHeight) {
+    top = window.innerHeight - menuRect.height - 10;
+  }
+
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+
+  console.log('[showTagEditMenu] Menu displayed at:', left, top);
+
+  // メニュー外クリックで閉じる
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      if (document.body.contains(menu)) {
+        document.body.removeChild(menu);
+      }
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 100);
+}
+
+// タグ編集ダイアログを開く
+let selectedTagColor = null;
+
+function openEditTagDialog(tag) {
+  editingTagId = tag.id;
+  selectedTagColor = tag.color;
+
+  const dialog = document.getElementById('edit-tag-dialog');
+  const nameInput = document.getElementById('edit-tag-name-input');
+  const palette = document.getElementById('edit-tag-color-palette');
+  const preview = document.getElementById('edit-tag-color-preview');
+
+  nameInput.value = tag.name;
+  preview.style.backgroundColor = tag.color;
+  preview.textContent = tag.name;
+
+  // カラーパレットを生成
+  palette.innerHTML = '';
+  TAG_COLOR_PALETTE.forEach(color => {
+    const colorItem = document.createElement('div');
+    colorItem.className = 'color-palette-item';
+    colorItem.style.backgroundColor = color;
+    if (color === selectedTagColor) {
+      colorItem.classList.add('selected');
+    }
+
+    colorItem.addEventListener('click', () => {
+      selectedTagColor = color;
+      preview.style.backgroundColor = color;
+
+      // 全ての選択状態をリセット
+      palette.querySelectorAll('.color-palette-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      colorItem.classList.add('selected');
+    });
+
+    palette.appendChild(colorItem);
+  });
+
+  dialog.classList.remove('hidden');
+  nameInput.focus();
+  nameInput.select();
+}
+
+// タグ編集を保存
+async function saveEditTag() {
+  const nameInput = document.getElementById('edit-tag-name-input');
+  const newName = nameInput.value.trim();
+
+  if (newName && editingTagId && selectedTagColor) {
+    await updateTagName(editingTagId, newName);
+    await updateTagColor(editingTagId, selectedTagColor);
+  }
+
+  closeEditTagDialog();
+}
+
+// タグ編集ダイアログを閉じる
+function closeEditTagDialog() {
+  const dialog = document.getElementById('edit-tag-dialog');
+  dialog.classList.add('hidden');
+  editingTagId = null;
+}
+
+// タグダイアログを閉じる
+function closeTagDialog() {
+  const dialog = document.getElementById('tag-dialog');
+  dialog.classList.add('hidden');
+  currentTagDialogFile = null;
+}
+
+// ドラッグ&ドロップでタグの順序を変更
+let draggedTagIndex = null;
+
+function handleTagDragStart(e) {
+  draggedTagIndex = parseInt(e.target.dataset.index);
+  e.target.classList.add('dragging');
+}
+
+function handleTagDragOver(e) {
+  e.preventDefault();
+}
+
+function handleTagDrop(e) {
+  e.preventDefault();
+  const dropIndex = parseInt(e.currentTarget.dataset.index);
+
+  if (draggedTagIndex !== null && draggedTagIndex !== dropIndex) {
+    // 配列を並び替え
+    const [movedTag] = editingTags.splice(draggedTagIndex, 1);
+    editingTags.splice(dropIndex, 0, movedTag);
+
+    // orderを更新
+    saveTagOrder();
+  }
+}
+
+function handleTagDragEnd(e) {
+  e.target.classList.remove('dragging');
+  draggedTagIndex = null;
+}
+
+// タグの順序を保存
+async function saveTagOrder() {
+  try {
+    for (let i = 0; i < editingTags.length; i++) {
+      await window.api.updateTag(editingTags[i].id, { order: i });
+    }
+    await loadTags();
+    editingTags = JSON.parse(JSON.stringify(tags));
+    renderTagManageList();
+    renderTagList(); // サイドバーのタグリストも更新
+  } catch (error) {
+    console.error('Failed to save tag order:', error);
   }
 }

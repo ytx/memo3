@@ -38,6 +38,7 @@ This is an Electron-based memo application with ACE editor integration for markd
   - `workspace.json` - Multi-workspace configuration (version 2.0 format: workspaces list, active workspace)
   - `settings.json` - Editor configuration (keybindings, themes, font size, whitespace display)
   - `sessions.json` - Per-workspace session states (open tabs, active tab per workspace)
+  - `tags.json` - Tag definitions and file associations (event-sourced log format for multi-PC sync)
 
 **Renderer Process**
 - `index.html` - Main UI with minimal sidebar, draggable tab bar, editor workspace, and dual context menus
@@ -55,17 +56,19 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **File-System Management**: Select root folder, auto-scan .md/.txt files, real-time file watching, filters temporary files
 - **Multi-Tab Interface**: Open multiple files in tabs with drag-and-drop tab reordering
 - **Per-Workspace Session Restoration**: Each workspace maintains its own session (open tabs, active tab, editor states)
-- **Enhanced Search**: Search both filenames and file content with detailed results display
+- **Tag Management**: Organize files with color-coded tags, filter by tags, search tags, multi-PC sync support
+- **Enhanced Search**: Search both filenames and file content with detailed results display, combinable with tag filters
 - **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, markdown preview, developer tools access
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
-- **File List Display**: Shows title (first non-empty line), filename, and full modification date/time
-- **Context Menus**: Right-click files for rename/delete, right-click status bar for developer tools
+- **File List Display**: Shows title (first non-empty line), filename, full modification date/time, and tag icons with hover details
+- **Context Menus**: Right-click files for rename/delete/tag management, right-click status bar for developer tools
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 - **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
+- **Material Symbols Icons**: Uses Material Symbols for consistent, scalable iconography
 
 ### IPC Communication Channels
 **File Management**
@@ -98,6 +101,15 @@ This is an Electron-based memo application with ACE editor integration for markd
 - `request-preview-reload` - Request to reload preview from current active tab
 - `preview-update` - Event to notify preview window of content changes
 - `reload-preview-content` - Event to request main window to send updated content
+
+**Tag Management**
+- `get-tags` - Retrieve all tags and file-tag associations
+- `create-tag` - Create new tag with name, color, and order
+- `update-tag` - Update tag properties (name or color)
+- `delete-tag` - Delete tag and all its file associations
+- `add-file-tag` - Associate tag with file
+- `remove-file-tag` - Remove tag association from file
+- `get-file-tags` - Get all tags associated with a specific file
 
 **URL and External Actions**
 - `open-url` - Open URLs in default browser from editor context menu
@@ -137,6 +149,20 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Direct Navigation**: Click search results to open files directly
 - **Jump to Line**: Click content match to open file and scroll to specific line
 - **Clear Function**: Easy search reset with × button
+- **Tag Filter Integration**: Combine text search with tag filters for precise results
+
+**Tag Management System**
+- **Tag Creation**: Create tags with custom names and colors from 16-color palette
+- **Quick Tag Creation**: Type tag name in search box and press Enter to create instantly
+- **File Tagging**: Right-click files to open tag dialog, click tags to toggle assignment
+- **Tag Editing**: Right-click tags in dialog for edit/delete menu, unified dialog for name and color
+- **Tag Filtering**: Three-state filter (show/hide/none) accessible via Material Symbols icon button
+- **Visual Indicators**: Files with tags show icon in file list, hover to see tag details
+- **Compact Badge Design**: Tags displayed as small, rounded badges (11px font, 6px radius)
+- **Color Palette**: 16 predefined colors (red, pink, purple, blue, cyan, teal, green, lime, yellow, amber, orange, brown)
+- **Event-Sourced Sync**: Log-based data structure enables conflict-free multi-PC synchronization
+- **Search Integration**: Text search and tag filters work together seamlessly
+- **Session Persistence**: Tag filter states saved per workspace session
 
 **Multiple Workspace Management**
 - **Workspace Selector UI**: Dropdown in sidebar showing current workspace name with add button
@@ -245,6 +271,12 @@ This is an Electron-based memo application with ACE editor integration for markd
 28. **Unified Button Colors**: New tab (+) button in tab bar matches workspace add (+) button color (blue)
 29. **Search with Line Jump**: Type "機能" in search box → Results show matched lines with "行 5" label → Click "行 5" → File opens and scrolls to line 5 with cursor positioned
 30. **Bullet List Indentation**: Type "- Item 1" → Press Enter → Type "Item 2" → Press Tab → Line indents to "  - Item 2" → Press Shift+Tab → Line outdents back to "- Item 2"
+31. **Create Tag**: Click tag filter button (sell icon) → Tag list appears → Type "重要" in filter box → Press Enter → New tag created with random color from palette
+32. **Assign Tag to File**: Right-click file → "タグを編集" → Tag dialog opens → Click "重要" tag → Tag becomes colored (assigned) → Click again → Tag becomes transparent (unassigned)
+33. **Edit Tag**: In tag dialog → Right-click "重要" tag → Select "編集" → Change name to "優先度高" and select red color from palette → Save → Tag updated everywhere
+34. **Filter by Tag**: Click tag filter button → Click "優先度高" tag once (shows) → Only files with that tag appear → Click again (hides) → Files with that tag hidden → Click again (none) → All files shown
+35. **Tag with Search**: Type "TODO" in search box → Click tag filter button → Set "優先度高" to show → Only files containing "TODO" AND tagged "優先度高" appear
+36. **Tag Icon in File List**: File with tags shows sell icon next to filename → Hover over icon → Tooltip appears showing all tag badges with colors
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

@@ -47,6 +47,15 @@ contextBridge.exposeInMainWorld('api', {
   updatePreview: (content) => ipcRenderer.invoke('update-preview', content),
   requestPreviewReload: () => ipcRenderer.invoke('request-preview-reload'),
 
+  // タグ管理
+  getTags: () => ipcRenderer.invoke('get-tags'),
+  createTag: (tagData) => ipcRenderer.invoke('create-tag', tagData),
+  updateTag: (tagId, updates) => ipcRenderer.invoke('update-tag', tagId, updates),
+  deleteTag: (tagId) => ipcRenderer.invoke('delete-tag', tagId),
+  addFileTag: (filePath, tagId) => ipcRenderer.invoke('add-file-tag', filePath, tagId),
+  removeFileTag: (filePath, tagId) => ipcRenderer.invoke('remove-file-tag', filePath, tagId),
+  getFileTags: (filePath) => ipcRenderer.invoke('get-file-tags', filePath),
+
   // メインプロセスからのイベント
   onNewMemo: (callback) => {
     ipcRenderer.on('new-memo', callback);

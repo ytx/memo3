@@ -187,35 +187,38 @@ body {
   color: var(--text-color);
 }
 
-.btn-add-workspace {
-  background: var(--button-color);
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+.workspace-separator {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
+.workspace-add-item {
+  color: var(--button-color);
   font-weight: bold;
-  transition: background 0.2s;
-  min-width: 40px;
-  height: 34px;
+  text-align: center;
+}
+
+.workspace-add-item:hover {
+  background: var(--border-color);
+}
+
+.search-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.btn-add-workspace:hover {
-  background: var(--button-hover-color);
-}
-
-.search-box {
+  gap: 8px;
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
 }
 
+.search-box {
+  position: relative;
+  flex: 1;
+}
+
 .search-box input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 40px 8px 12px;
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -228,13 +231,9 @@ body {
   border-color: var(--button-color);
 }
 
-.search-box {
-  position: relative;
-}
-
 .btn-clear {
   position: absolute;
-  right: 20px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
@@ -255,6 +254,110 @@ body {
 .btn-clear:hover {
   background: var(--border-color);
   color: var(--text-color);
+}
+
+/* タグフィルターボタン */
+.btn-toggle-tags {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 8px 12px;
+  height: 34px;
+  min-width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-toggle-tags .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.btn-toggle-tags:hover {
+  background: var(--border-color);
+  color: var(--text-color);
+  border-color: var(--button-color);
+}
+
+.btn-toggle-tags.active {
+  background: var(--button-color);
+  color: white;
+  border-color: var(--button-color);
+}
+
+/* タグフィルターエリア */
+.tag-filter {
+  border-bottom: 1px solid var(--border-color);
+  background: var(--sidebar-color);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tag-filter-header {
+  padding: 8px 15px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-secondary-color);
+  background: var(--bg-color);
+}
+
+.tag-list {
+  padding: 8px;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.tag-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tag-item-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.tag-item-name {
+  flex: 1;
+  color: var(--text-color);
+}
+
+.tag-item-count {
+  font-size: 11px;
+  color: var(--text-secondary-color);
+  margin-left: 8px;
+}
+
+/* タグステータス */
+.tag-item.status-show {
+  background: rgba(33, 150, 243, 0.2);
+  border: 1px solid rgba(33, 150, 243, 0.5);
+}
+
+.tag-item.status-hide {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+}
+
+.tag-item.status-none {
+  background: transparent;
+  border: 1px solid transparent;
 }
 
 /* 検索結果 */
@@ -470,6 +573,44 @@ body {
 
 .file-item.text .file-icon {
   color: #858585;
+}
+
+/* ファイルリストのタグアイコン */
+.file-tag-icon {
+  margin-left: 6px;
+  font-size: 16px;
+  cursor: help;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.file-tag-tooltip {
+  visibility: hidden;
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.file-tag-icon:hover .file-tag-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.file-tag-tooltip-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin: 0 2px;
+  font-size: 11px;
 }
 
 /* 旧メモリストとの互換性のため残す */
@@ -939,6 +1080,128 @@ body {
 .dialog-actions .btn-secondary {
   flex: 1;
   min-width: 120px;
+}
+
+/* タグ管理ダイアログ */
+.tag-dialog-content {
+  width: 700px;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.tag-dialog-file-info {
+  padding: 10px 15px;
+  background: var(--bg-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+/* タグ検索ボックス */
+.tag-search-box {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.tag-search-box input {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.tag-search-box input:focus {
+  outline: none;
+  border-color: var(--button-color);
+}
+
+.tag-search-box .btn-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* タグフローエリア */
+.tag-flow-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 15px;
+  background: var(--bg-color);
+  align-items: flex-start;
+  border-radius: 6px;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+/* タグバッジアイテム */
+.tag-badge-item {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary-color);
+  height: auto;
+  flex-shrink: 0;
+}
+
+.tag-badge-item:hover {
+  background: var(--border-color);
+}
+
+.tag-badge-item.assigned {
+  color: white;
+  border-color: transparent;
+  font-weight: normal;
+}
+
+/* カラーパレット */
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  max-width: 280px;
+}
+
+.color-palette-item {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.color-palette-item:hover {
+  transform: scale(1.1);
+}
+
+.color-palette-item.selected {
+  border-color: var(--text-primary-color);
+  box-shadow: 0 0 0 2px var(--background-color);
+}
+
+/* カラーピッカー */
+input[type="color"] {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
 /* コンテキストメニュー */

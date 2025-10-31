@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>memo3</title>
+  <link rel="stylesheet" href="node_modules/material-symbols/outlined.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,14 +22,23 @@
             <!-- ワークスペースリストが動的に追加される -->
           </div>
         </div>
-        <button id="add-workspace-btn" class="btn-add-workspace" title="ワークスペースを追加">+</button>
       </div>
 
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="ファイル名・本文検索...">
-        <button id="clear-search-btn" class="btn-clear" title="検索をクリア">×</button>
+      <div class="search-container">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="ファイル名・本文検索...">
+          <button id="clear-search-btn" class="btn-clear" title="検索をクリア">×</button>
+        </div>
+        <button id="toggle-tags-btn" class="btn-toggle-tags" title="タグフィルター"><span class="material-symbols-outlined">sell</span></button>
       </div>
-      
+
+      <div class="tag-filter" id="tag-filter" style="display: none;">
+        <div class="tag-filter-header">タグフィルター</div>
+        <div class="tag-list" id="tag-list">
+          <!-- タグリストが動的に追加される -->
+        </div>
+      </div>
+
       <div class="search-results" id="search-results" style="display: none;">
         <!-- 検索結果がここに表示される -->
       </div>
@@ -183,14 +193,64 @@
       </div>
     </div>
   </div>
-  
+
+  <!-- タグ管理ダイアログ -->
+  <div id="tag-dialog" class="dialog hidden">
+    <div class="dialog-content tag-dialog-content">
+      <h2>タグ管理</h2>
+      <div class="tag-dialog-file-info" id="tag-dialog-file-info">
+        <!-- ファイル名が表示される -->
+      </div>
+
+      <!-- 検索/追加ボックス -->
+      <div class="tag-search-box">
+        <input type="text" id="tag-search-input" placeholder="タグを検索または追加...">
+        <button id="tag-search-clear-btn" class="btn-clear" title="クリア">×</button>
+      </div>
+
+      <!-- タグ表示エリア -->
+      <div class="tag-flow-area" id="tag-flow-area">
+        <!-- タグがフローレイアウトで表示される -->
+      </div>
+
+      <div class="dialog-actions">
+        <button id="tag-dialog-close-btn" class="btn-primary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- タグ編集ダイアログ -->
+  <div id="edit-tag-dialog" class="dialog hidden">
+    <div class="dialog-content">
+      <h2>タグを編集</h2>
+      <div class="settings-group">
+        <label for="edit-tag-name-input">タグ名:</label>
+        <input type="text" id="edit-tag-name-input" placeholder="タグ名">
+      </div>
+      <div class="settings-group">
+        <label for="edit-tag-color-palette">色:</label>
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div id="edit-tag-color-palette" class="color-palette">
+            <!-- 色パレットが動的に追加される -->
+          </div>
+          <div id="edit-tag-color-preview" style="padding: 6px 14px; border-radius: 12px; color: white; font-size: 13px; flex-shrink: 0;">プレビュー</div>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="edit-tag-save-btn" class="btn-primary">保存</button>
+        <button id="edit-tag-cancel-btn" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <!-- コンテキストメニュー -->
   <div id="context-menu" class="context-menu">
+    <div id="context-edit-tags" class="context-menu-item">タグを編集</div>
     <div id="context-rename" class="context-menu-item">ファイル名更新</div>
     <div id="context-delete" class="context-menu-item danger">削除</div>
   </div>
-  
-  
+
+
   <!-- ステータスバー用コンテキストメニュー -->
   <div id="status-context-menu" class="context-menu">
     <div id="status-devtools" class="context-menu-item">開発者ツール</div>
