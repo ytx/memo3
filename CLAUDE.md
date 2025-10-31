@@ -135,10 +135,12 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Workspace Selector UI**: Dropdown in sidebar showing current workspace name with add button
 - **Quick Switching**: Click workspace name to open dropdown menu with all workspaces (sorted by last accessed)
 - **Add Workspace**: + button opens folder selection dialog, adds workspace to list, auto-switches to new workspace
-- **Remove Workspace**: Right-click workspace → "解除" removes from list (does not delete folder)
+- **Remove Workspace**: Confirmation dialog → "解除" removes from list (does not delete folder)
 - **Per-Workspace Sessions**: Each workspace maintains independent session (open tabs, active tab)
 - **Automatic Session Save**: Saves current session before switching to different workspace
 - **Automatic Session Restore**: Loads saved session when switching back to workspace
+- **Unsaved New Tab Protection**: Before switching, checks for unsaved new tabs (files not yet created), prompts to save or cancel
+- **Auto-Save Modified Files**: Automatically saves all modified existing files before workspace switch
 - **First-Time Setup**: On initial launch, creates ~/Documents/memo3 with welcome files (概要.md, 操作説明.md, サンプル.md)
 - **Migration Support**: Automatically migrates old workspace.json and session.json formats to new multi-workspace format
 
@@ -228,6 +230,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 22. **Switch Workspace**: Click "ProjectA" dropdown → Shows "ProjectA" and "memo3" in list → Click "memo3" → Current tabs saved → All tabs closed → memo3 workspace loaded → Previous memo3 tabs restored
 23. **Remove Workspace**: Click "ProjectA" dropdown → Hover over "ProjectA" → Click "解除" button → Confirm → ProjectA removed from list → Folder remains on disk, only removed from workspace list
 24. **Workspace Session Independence**: Open file1.md and file2.md in "ProjectA" → Switch to "memo3" → Open file3.md → Switch back to "ProjectA" → file1.md and file2.md tabs restored exactly as left
+25. **Unsaved New Tab Protection**: Create new tab → Type "Hello\nWorld" → Switch workspace → Dialog appears: "未保存の新規タブがあります: - Hello (2行)" → Click OK → File "Hello.md" saved automatically → Workspace switches
+26. **New Tab Keyboard Shortcut**: Press ⌘N (macOS only) → New tab opens with placeholder text → Immediately ready for typing
+27. **Empty State UI**: Close all tabs → Center of editor shows large "新しい文書を作成" button → Click button → New tab opens
+28. **Unified Button Colors**: New tab (+) button in tab bar matches workspace add (+) button color (blue)
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

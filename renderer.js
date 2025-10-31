@@ -2434,6 +2434,14 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 通常のキーボードショートカット（バブルフェーズ）
   document.addEventListener('keydown', (e) => {
+    // Cmd+N (macOSのみ): 新しいタブを作成
+    if (e.metaKey && !e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      createNewTabWithFile();
+      return;
+    }
+
+    // Cmd+S / Ctrl+S: 保存
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       // Emacsキーバインド以外の場合のみ保存
       if (settings.keybinding !== 'ace/keyboard/emacs') {
@@ -2454,8 +2462,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // IPCイベントの処理
-window.api.onNewMemo(() => createNewFile()); // 互換性のため
-window.api.onSaveMemo(() => saveFile()); // 互換性のため
+window.api.onNewMemo(() => createNewTabWithFile());
+window.api.onSaveMemo(() => saveFile());
 window.api.onOpenSettings(() => showSettings());
 
 // ファイル更新イベントの処理
@@ -2499,6 +2507,84 @@ async function saveAllModifiedTabs() {
       }
     }
   }
+}
+
+async function checkUnsavedNewTabs() {
+  // 新規タブ（ファイル未保存）で内容があるものを確認
+  const unsavedNewTabs = [];
+
+  for (const tab of tabManager.tabs) {
+    if (!tab.file && editors[tab.id]) {
+      const content = editors[tab.id].getValue();
+      const lines = content.split('\n').filter(line => line.trim());
+
+      // 内容がある場合（非空白行が1行以上）
+      if (lines.length > 0) {
+        unsavedNewTabs.push({
+          tab: tab,
+          content: content,
+          lineCount: lines.length,
+          preview: lines[0].substring(0, 30) + (lines[0].length > 30 ? '...' : '')
+        });
+      }
+    }
+  }
+
+  if (unsavedNewTabs.length === 0) {
+    return true; // 問題なし
+  }
+
+  // 未保存の新規タブがある場合、確認
+  const tabInfo = unsavedNewTabs.map(item =>
+    `  - ${item.preview} (${item.lineCount}行)`
+  ).join('\n');
+
+  const message = `未保存の新規タブがあります：\n${tabInfo}\n\nどうしますか？`;
+  const choice = confirm(message + '\n\n[OK] 保存して切り替え\n[キャンセル] 切り替えをキャンセル');
+
+  if (!choice) {
+    return false; // キャンセル
+  }
+
+  // 保存して切り替え
+  for (const item of unsavedNewTabs) {
+    // ファイルを作成して保存
+    const lines = item.content.split('\n');
+    let fileName = 'Untitled';
+
+    // 最初の非空白行をファイル名に使用
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        fileName = trimmed.replace(/^#+\s*/, '').substring(0, 16);
+        break;
+      }
+    }
+
+    // ファイル名に使えない文字を削除
+    fileName = fileName.replace(/[\/\\:*?"<>|]/g, '');
+    if (!fileName) fileName = 'Untitled';
+
+    // .md 拡張子を追加
+    if (!fileName.endsWith('.md')) {
+      fileName += '.md';
+    }
+
+    // ファイルを作成
+    const result = await window.api.createFile(fileName, item.content);
+    if (result.success) {
+      // タブのファイル情報を更新
+      files = await window.api.getFiles();
+      const newFile = files.find(f => f.path === result.filePath);
+      if (newFile) {
+        item.tab.file = newFile;
+        item.tab.title = newFile.title || newFile.name;
+        item.tab.isModified = false;
+      }
+    }
+  }
+
+  return true; // 保存完了
 }
 
 async function loadWorkspaces() {
@@ -2579,6 +2665,12 @@ async function addWorkspace() {
     // 未保存の変更を自動保存
     await saveAllModifiedTabs();
 
+    // 未保存の新規タブを確認
+    const canProceed = await checkUnsavedNewTabs();
+    if (!canProceed) {
+      return; // キャンセル
+    }
+
     // 現在のセッションを保存
     await tabManager.saveSession();
 
@@ -2614,6 +2706,12 @@ async function switchWorkspace(workspacePath) {
   try {
     // 未保存の変更を自動保存
     await saveAllModifiedTabs();
+
+    // 未保存の新規タブを確認
+    const canProceed = await checkUnsavedNewTabs();
+    if (!canProceed) {
+      return; // キャンセル
+    }
 
     // 現在のセッションを保存
     await tabManager.saveSession();
