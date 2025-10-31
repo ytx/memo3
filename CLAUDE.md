@@ -30,9 +30,9 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Implements macOS-specific error handling for IMK (Input Method Kit) issues
 - Data is stored in:
   - User-selected root folder - All .md/.txt files (sorted by modification time, descending)
-  - `workspace.json` - Workspace configuration (root folder path)
+  - `workspace.json` - Multi-workspace configuration (version 2.0 format: workspaces list, active workspace)
   - `settings.json` - Editor configuration (keybindings, themes, font size, whitespace display)
-  - `session.json` - Session state (open tabs, active tab, editor states)
+  - `sessions.json` - Per-workspace session states (open tabs, active tab per workspace)
 
 **Renderer Process**
 - `index.html` - Main UI with minimal sidebar, draggable tab bar, editor workspace, and dual context menus
@@ -46,9 +46,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Context isolation is enabled, node integration is disabled
 
 ### Key Features
+- **Multiple Workspace Support**: Manage multiple project folders with independent sessions, quick switching, and auto-restore
 - **File-System Management**: Select root folder, auto-scan .md/.txt files, real-time file watching, filters temporary files
 - **Multi-Tab Interface**: Open multiple files in tabs with drag-and-drop tab reordering
-- **Session Restoration**: Automatically restores open tabs and editor states on app restart
+- **Per-Workspace Session Restoration**: Each workspace maintains its own session (open tabs, active tab, editor states)
 - **Enhanced Search**: Search both filenames and file content with detailed results display
 - **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, markdown preview, developer tools access
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
@@ -77,8 +78,14 @@ This is an Electron-based memo application with ACE editor integration for markd
 
 **Settings & Session Management**
 - `get-settings`, `save-settings` - Editor settings management (includes theme presets, with real-time persistence)
-- `get-session`, `save-session` - Session state management (open tabs, active tab)
-- `select-folder` - Folder selection with immediate UI update (no restart required)
+- `get-session`, `save-session` - Per-workspace session state management (open tabs, active tab)
+- `select-folder` - Folder selection with immediate UI update (no restart required, adds to workspace list)
+
+**Workspace Management**
+- `get-workspaces` - Retrieve all workspaces with active workspace (sorted by last accessed)
+- `add-workspace` - Add new workspace with folder selection dialog
+- `switch-workspace` - Switch to different workspace (saves current session, loads target session)
+- `remove-workspace` - Remove workspace from list (does not delete folder)
 
 **Preview Window**
 - `open-preview` - Open markdown preview in separate window
@@ -124,9 +131,20 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Direct Navigation**: Click search results to open files directly
 - **Clear Function**: Easy search reset with × button
 
+**Multiple Workspace Management**
+- **Workspace Selector UI**: Dropdown in sidebar showing current workspace name with add button
+- **Quick Switching**: Click workspace name to open dropdown menu with all workspaces (sorted by last accessed)
+- **Add Workspace**: + button opens folder selection dialog, adds workspace to list, auto-switches to new workspace
+- **Remove Workspace**: Right-click workspace → "解除" removes from list (does not delete folder)
+- **Per-Workspace Sessions**: Each workspace maintains independent session (open tabs, active tab)
+- **Automatic Session Save**: Saves current session before switching to different workspace
+- **Automatic Session Restore**: Loads saved session when switching back to workspace
+- **First-Time Setup**: On initial launch, creates ~/Documents/memo3 with welcome files (概要.md, 操作説明.md, サンプル.md)
+- **Migration Support**: Automatically migrates old workspace.json and session.json formats to new multi-workspace format
+
 **Session Restoration**
-- **Complete State Persistence**: Saves all open tabs, active tab, and file states
-- **Automatic Restoration**: Restores session on app restart without user intervention
+- **Per-Workspace State Persistence**: Saves all open tabs, active tab, and file states per workspace
+- **Automatic Restoration**: Restores workspace-specific session on app restart without user intervention
 - **File Validation**: Only restores tabs for files that still exist on disk
 - **Rename Tracking**: Updates session immediately when files are renamed, ensuring correct restoration
 - **Content Restoration**: Reloads file content and maintains editor state
@@ -205,6 +223,11 @@ This is an Electron-based memo application with ACE editor integration for markd
 17. **IME-Safe Auto-Save**: Type Japanese text "こんにちは" → Start converting → Auto-save timer triggers → Save is deferred until conversion completes → Press Enter to confirm → Auto-save executes without losing characters
 18. **Bullet List Creation**: Select 3 lines of text → Right-click → "箇条書き(-)にする" → Each line gets "- " prefix → Ctrl+Z undoes all at once
 19. **Indented Bullet Lists**: Select lines with leading spaces "  item1\n  item2" → Right-click → "箇条書き(-)にする" → Results in "  - item1\n  - item2" (spaces preserved)
+20. **First-Time Launch**: Launch memo3 for first time → Creates ~/Documents/memo3 folder → Generates 3 welcome files (概要.md, 操作説明.md, サンプル.md) → Opens with files visible
+21. **Add Workspace**: Click + button in workspace selector → Select folder dialog appears → Choose "ProjectA" folder → Workspace added and switched to ProjectA → File list shows ProjectA files
+22. **Switch Workspace**: Click "ProjectA" dropdown → Shows "ProjectA" and "memo3" in list → Click "memo3" → Current tabs saved → All tabs closed → memo3 workspace loaded → Previous memo3 tabs restored
+23. **Remove Workspace**: Click "ProjectA" dropdown → Hover over "ProjectA" → Click "解除" button → Confirm → ProjectA removed from list → Folder remains on disk, only removed from workspace list
+24. **Workspace Session Independence**: Open file1.md and file2.md in "ProjectA" → Switch to "memo3" → Open file3.md → Switch back to "ProjectA" → file1.md and file2.md tabs restored exactly as left
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

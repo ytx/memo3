@@ -222,6 +222,9 @@ class TabManager {
     // スクロールボタンの状態を更新
     setTimeout(updateScrollButtons, 0);
 
+    // 空状態の表示/非表示を更新
+    updateEmptyState();
+
     // セッションを保存
     this.saveSession();
   }
@@ -2211,6 +2214,18 @@ async function reloadModifiedOpenFiles() {
   }
 }
 
+// 空状態の表示/非表示を更新
+function updateEmptyState() {
+  const emptyState = document.getElementById('editor-empty-state');
+  if (emptyState) {
+    if (tabManager.tabs.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+    }
+  }
+}
+
 // 初期化
 async function init() {
   // 設定の読み込み
@@ -2235,18 +2250,24 @@ async function init() {
   // 空白文字表示ボタンの初期状態を設定
   const whitespaceButton = document.getElementById('toggle-whitespace-btn');
   whitespaceButton.style.backgroundColor = settings.showInvisibles ? '#007acc' : 'transparent';
-  
+
+  // ワークスペースセレクターを初期化
+  await initWorkspaceSelector();
+
   // ファイルとルートフォルダの読み込み
   files = await window.api.getFiles();
   rootFolder = await window.api.getRootFolder();
-  
+
   updateRootFolderPath();
   displayFiles();
   updateFileStatus();
   updateCurrentFilePath();
-  
+
   // セッションを復元
   await tabManager.restoreSession();
+
+  // 空状態を更新
+  updateEmptyState();
 }
 
 // イベントリスナーの設定
@@ -2262,6 +2283,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('font-decrease-btn').addEventListener('click', decreaseFontSize);
   document.getElementById('new-tab-btn').addEventListener('click', () => {
     // 新しいタブを作成して新規ファイルとする
+    createNewTabWithFile();
+  });
+
+  // 空状態の新規作成ボタン
+  document.getElementById('empty-state-new-btn').addEventListener('click', () => {
     createNewTabWithFile();
   });
 
@@ -2442,3 +2468,230 @@ window.api.onFilesUpdated(async (_, updatedFiles) => {
 
   showStatus('ファイルリストを更新しました');
 });
+
+// ===== ワークスペース管理 =====
+async function initWorkspaceSelector() {
+  await loadWorkspaces();
+
+  // イベントリスナー設定
+  document.getElementById('workspace-current-btn').addEventListener('click', toggleWorkspaceMenu);
+  document.getElementById('add-workspace-btn').addEventListener('click', addWorkspace);
+
+  // メニューの外をクリックしたら閉じる
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('workspace-dropdown');
+    const menu = document.getElementById('workspace-menu');
+    if (!dropdown.contains(e.target) && menu.style.display !== 'none') {
+      menu.style.display = 'none';
+    }
+  });
+}
+
+async function saveAllModifiedTabs() {
+  // 変更されたタブを確認
+  const modifiedTabs = tabManager.tabs.filter(tab => tab.isModified);
+
+  if (modifiedTabs.length > 0) {
+    // すべての変更を保存
+    for (const tab of modifiedTabs) {
+      if (tab.file) {
+        await saveFile(tab.id);
+      }
+    }
+  }
+}
+
+async function loadWorkspaces() {
+  try {
+    const data = await window.api.getWorkspaces();
+    const { workspaces, activeWorkspace } = data;
+
+    // 現在のワークスペース名を表示
+    if (activeWorkspace && workspaces.length > 0) {
+      const active = workspaces.find(w => w.path === activeWorkspace);
+      if (active) {
+        document.getElementById('workspace-current-name').textContent = active.name;
+      }
+    }
+
+    // ワークスペースメニューを描画
+    renderWorkspaceMenu(workspaces, activeWorkspace);
+  } catch (error) {
+    console.error('Failed to load workspaces:', error);
+  }
+}
+
+function renderWorkspaceMenu(workspaces, activeWorkspace) {
+  const menu = document.getElementById('workspace-menu');
+  menu.innerHTML = '';
+
+  if (workspaces.length === 0) {
+    const emptyItem = document.createElement('div');
+    emptyItem.className = 'workspace-item';
+    emptyItem.style.color = 'var(--text-secondary-color)';
+    emptyItem.textContent = 'ワークスペースがありません';
+    menu.appendChild(emptyItem);
+    return;
+  }
+
+  workspaces.forEach(workspace => {
+    const item = document.createElement('div');
+    item.className = 'workspace-item';
+    if (workspace.path === activeWorkspace) {
+      item.classList.add('active');
+    }
+
+    const name = document.createElement('span');
+    name.className = 'workspace-name';
+    name.textContent = workspace.name;
+    name.title = workspace.path; // ツールチップでフルパス表示
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'workspace-remove-btn';
+    removeBtn.textContent = '解除';
+    removeBtn.onclick = (e) => {
+      e.stopPropagation();
+      removeWorkspace(workspace.path);
+    };
+
+    item.appendChild(name);
+    item.appendChild(removeBtn);
+
+    // ワークスペース名クリックで切り替え
+    name.onclick = (e) => {
+      e.stopPropagation();
+      if (workspace.path !== activeWorkspace) {
+        switchWorkspace(workspace.path);
+      }
+    };
+
+    menu.appendChild(item);
+  });
+}
+
+function toggleWorkspaceMenu() {
+  const menu = document.getElementById('workspace-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+async function addWorkspace() {
+  try {
+    // 未保存の変更を自動保存
+    await saveAllModifiedTabs();
+
+    // 現在のセッションを保存
+    await tabManager.saveSession();
+
+    const result = await window.api.addWorkspace();
+    if (result.success) {
+      // ワークスペースが追加され、自動的に切り替わる
+      await loadWorkspaces();
+
+      // すべてのタブを閉じる（セッション保存済み）
+      const tabIds = [...tabManager.tabs.map(t => t.id)];
+      for (const tabId of tabIds) {
+        await tabManager.closeTab(tabId, true); // skipAutoSave = true
+      }
+
+      // ファイルリストとタブを更新
+      files = await window.api.getFiles();
+      rootFolder = await window.api.getRootFolder();
+      updateRootFolderPath();
+      displayFiles();
+
+      // 新しいワークスペースのセッションを復元
+      await tabManager.restoreSession();
+
+      showStatus(`ワークスペース「${result.workspace.name}」を追加しました`);
+    }
+  } catch (error) {
+    console.error('Failed to add workspace:', error);
+    showStatus('ワークスペースの追加に失敗しました');
+  }
+}
+
+async function switchWorkspace(workspacePath) {
+  try {
+    // 未保存の変更を自動保存
+    await saveAllModifiedTabs();
+
+    // 現在のセッションを保存
+    await tabManager.saveSession();
+
+    // ワークスペースを切り替え
+    const result = await window.api.switchWorkspace(workspacePath);
+
+    if (result.success) {
+      // メニューを閉じる
+      document.getElementById('workspace-menu').style.display = 'none';
+
+      // ワークスペースを再読み込み
+      await loadWorkspaces();
+
+      // すべてのタブを閉じる（セッション保存済み）
+      const tabIds = [...tabManager.tabs.map(t => t.id)];
+      for (const tabId of tabIds) {
+        await tabManager.closeTab(tabId, true); // skipAutoSave = true
+      }
+
+      // ファイルリストとタブを更新
+      files = await window.api.getFiles();
+      rootFolder = await window.api.getRootFolder();
+      updateRootFolderPath();
+      displayFiles();
+
+      // 新しいワークスペースのセッションを復元
+      await tabManager.restoreSession();
+
+      showStatus('ワークスペースを切り替えました');
+    } else {
+      if (result.error === 'Workspace folder does not exist') {
+        // フォルダが存在しない場合は自動削除を提案
+        if (confirm('ワークスペースフォルダが存在しません。リストから削除しますか？')) {
+          await removeWorkspace(workspacePath);
+        }
+      } else {
+        showStatus('ワークスペースの切り替えに失敗しました');
+      }
+    }
+  } catch (error) {
+    console.error('Failed to switch workspace:', error);
+    showStatus('ワークスペースの切り替えに失敗しました');
+  }
+}
+
+async function removeWorkspace(workspacePath) {
+  try {
+    // ワークスペース名を取得
+    const data = await window.api.getWorkspaces();
+    const workspace = data.workspaces.find(w => w.path === workspacePath);
+    const workspaceName = workspace ? workspace.name : workspacePath;
+
+    // 確認ダイアログ
+    const confirmed = confirm(`ワークスペース「${workspaceName}」をリストから削除しますか？\n\n※フォルダ自体は削除されません。`);
+    if (!confirmed) {
+      return;
+    }
+
+    const result = await window.api.removeWorkspace(workspacePath);
+
+    if (result.success) {
+      // ワークスペースリストを再読み込み
+      await loadWorkspaces();
+
+      // 削除したワークスペースがアクティブだった場合、UIを更新
+      files = await window.api.getFiles();
+      rootFolder = await window.api.getRootFolder();
+      updateRootFolderPath();
+      displayFiles();
+
+      // セッションを復元
+      await tabManager.restoreSession();
+
+      showStatus('ワークスペースをリストから削除しました');
+    }
+  } catch (error) {
+    console.error('Failed to remove workspace:', error);
+    showStatus('ワークスペースの削除に失敗しました');
+  }
+}

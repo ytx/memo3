@@ -25,9 +25,15 @@ contextBridge.exposeInMainWorld('api', {
   // セッション関連
   getSession: () => ipcRenderer.invoke('get-session'),
   saveSession: (session) => ipcRenderer.invoke('save-session', session),
-  
+
   // フォルダ選択
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+
+  // ワークスペース管理
+  getWorkspaces: () => ipcRenderer.invoke('get-workspaces'),
+  addWorkspace: () => ipcRenderer.invoke('add-workspace'),
+  switchWorkspace: (workspacePath) => ipcRenderer.invoke('switch-workspace', workspacePath),
+  removeWorkspace: (workspacePath) => ipcRenderer.invoke('remove-workspace', workspacePath),
   
   // 開発者ツール
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),

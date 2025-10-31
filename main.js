@@ -19,10 +19,13 @@ let memos = [];
 let rootFolder = null;
 let fileWatcher = null;
 let files = [];
+let workspaces = [];
+let activeWorkspace = null;
 const MEMOS_FILE = path.join(app.getPath('userData'), 'memos.json');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const WORKSPACE_FILE = path.join(app.getPath('userData'), 'workspace.json');
-const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
+const SESSIONS_FILE = path.join(app.getPath('userData'), 'sessions.json');
+const SESSION_FILE = path.join(app.getPath('userData'), 'session.json'); // 旧形式（マイグレーション用）
 
 async function loadMemos() {
   try {
@@ -67,47 +70,356 @@ async function saveSettings(settings) {
   }
 }
 
-async function loadWorkspace() {
+async function loadWorkspaces() {
   try {
     const data = await fs.readFile(WORKSPACE_FILE, 'utf8');
-    const workspace = JSON.parse(data);
-    rootFolder = workspace.rootFolder;
-    if (rootFolder) {
+    const workspaceData = JSON.parse(data);
+
+    // 旧形式からのマイグレーション
+    if (workspaceData.rootFolder && !workspaceData.version) {
+      console.log('Migrating workspace.json from old format to new format');
+      const oldRootFolder = workspaceData.rootFolder;
+      const folderName = path.basename(oldRootFolder);
+
+      workspaces = [{
+        path: oldRootFolder,
+        name: folderName,
+        lastAccessed: new Date().toISOString()
+      }];
+      activeWorkspace = oldRootFolder;
+
+      await saveWorkspaces();
+
+      // 旧session.jsonがあれば、sessions.jsonに移行
+      await migrateSessions();
+    } else if (workspaceData.version === '2.0') {
+      // 新形式
+      workspaces = workspaceData.workspaces || [];
+      activeWorkspace = workspaceData.activeWorkspace || null;
+    } else {
+      // 空または不明な形式
+      workspaces = [];
+      activeWorkspace = null;
+    }
+
+    // アクティブワークスペースが設定されている場合、rootFolderを設定
+    if (activeWorkspace) {
+      rootFolder = activeWorkspace;
       await scanFiles();
       setupFileWatcher();
     }
   } catch (error) {
-    rootFolder = null;
-    files = [];
+    // workspace.jsonが存在しない場合は初回起動とみなす
+    console.log('workspace.json not found, initializing first-time setup');
+    await firstTimeSetup();
   }
 }
 
-async function saveWorkspace() {
+async function saveWorkspaces() {
   try {
-    const workspace = { rootFolder };
-    await fs.writeFile(WORKSPACE_FILE, JSON.stringify(workspace, null, 2));
+    const workspaceData = {
+      version: '2.0',
+      workspaces: workspaces,
+      activeWorkspace: activeWorkspace
+    };
+    await fs.writeFile(WORKSPACE_FILE, JSON.stringify(workspaceData, null, 2));
   } catch (error) {
-    console.error('Failed to save workspace:', error);
+    console.error('Failed to save workspaces:', error);
   }
 }
 
-async function loadSession() {
+async function loadSessions() {
   try {
-    const data = await fs.readFile(SESSION_FILE, 'utf8');
+    const data = await fs.readFile(SESSIONS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    return {
-      openTabs: [],
-      activeTabId: null
-    };
+    return {};
   }
 }
 
-async function saveSession(session) {
+async function saveSessions(sessions) {
   try {
-    await fs.writeFile(SESSION_FILE, JSON.stringify(session, null, 2));
+    await fs.writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
   } catch (error) {
-    console.error('Failed to save session:', error);
+    console.error('Failed to save sessions:', error);
+  }
+}
+
+async function getWorkspaceSession(workspacePath) {
+  const sessions = await loadSessions();
+  return sessions[workspacePath] || {
+    openTabs: [],
+    activeTabId: null
+  };
+}
+
+async function saveWorkspaceSession(workspacePath, session) {
+  const sessions = await loadSessions();
+  sessions[workspacePath] = session;
+  await saveSessions(sessions);
+}
+
+async function migrateSessions() {
+  try {
+    // 旧session.jsonがあるか確認
+    const oldSessionData = await fs.readFile(SESSION_FILE, 'utf8');
+    const oldSession = JSON.parse(oldSessionData);
+
+    // activeWorkspaceに対応するセッションとして保存
+    if (activeWorkspace) {
+      const sessions = {};
+      sessions[activeWorkspace] = oldSession;
+      await saveSessions(sessions);
+      console.log('Migrated session.json to sessions.json');
+    }
+  } catch (error) {
+    // 旧session.jsonがない場合は何もしない
+  }
+}
+
+async function firstTimeSetup() {
+  try {
+    // ドキュメントフォルダにmemo3フォルダを作成
+    const documentsPath = app.getPath('documents');
+    const memo3Folder = path.join(documentsPath, 'memo3');
+
+    // フォルダが存在しない場合のみ作成
+    try {
+      await fs.access(memo3Folder);
+    } catch {
+      await fs.mkdir(memo3Folder, { recursive: true });
+      console.log('Created memo3 folder:', memo3Folder);
+    }
+
+    // 初期ファイルを作成
+    const initialFiles = {
+      '概要.md': `# memo3へようこそ
+
+memo3はシンプルで高速なマークダウンメモアプリケーションです。
+
+## 主な機能
+
+- **マルチタブエディタ**: 複数のファイルを同時に開いて編集
+- **リアルタイムファイル監視**: 外部エディタでの変更を自動検出
+- **複数ワークスペース対応**: プロジェクトごとにフォルダを切り替え
+- **高速検索**: ファイル名と内容を横断検索
+- **テーマカスタマイズ**: 7種類以上のエディタテーマから選択
+- **Emacsキーバインド対応**: Vim、Emacsなど複数のキーバインドをサポート
+- **自動保存**: 編集後5秒で自動保存（IME対応）
+- **セッション復元**: アプリ再起動時に前回のタブを復元
+- **マークダウンプレビュー**: 別ウィンドウでリアルタイムプレビュー
+
+## ワークスペースについて
+
+画面左上のプルダウンから、複数のフォルダ（ワークスペース）を切り替えることができます。
+各ワークスペースは独立したセッションを持ち、開いているタブの状態が保存されます。
+
+新しいワークスペースを追加するには、+ボタンをクリックしてフォルダを選択してください。
+`,
+
+      '操作説明.md': `# 操作マニュアル
+
+## 基本操作
+
+### ファイル管理
+
+- **新しいファイルを作成**: 右上の + ボタンをクリック
+  - 2行以上入力すると自動的にファイルが作成されます
+  - ファイル名は最初の行から自動生成されます
+
+- **ファイルを開く**: 左側のファイルリストからクリック
+
+- **ファイルを検索**: 左側の検索ボックスに入力
+  - ファイル名と内容の両方を検索できます
+
+- **ファイルを削除**: ファイルリストでファイルを右クリック → 「削除」
+
+- **ファイル名を更新**: ファイルリストでファイルを右クリック → 「ファイル名更新」
+  - ファイルの最初の行に基づいて自動的にファイル名が更新されます
+
+### タブ操作
+
+- **タブを閉じる**: タブの × ボタンをクリック
+- **タブを並べ替え**: タブをドラッグ＆ドロップ
+- **タブをスクロール**: タブバーの左右の ‹ › ボタンをクリック
+
+### エディタ機能
+
+- **自動保存**: 編集後5秒で自動的に保存されます
+- **フォントサイズ変更**: 右下の A- / A+ ボタン
+- **テーマ切り替え**: 右下の 🎨 ボタン（設定で2つのテーマを登録可能）
+- **空白文字表示**: 右下の ¶ ボタン
+- **マークダウンプレビュー**: 右下の 👁 ボタン
+
+### 右クリックメニュー
+
+エディタ上で右クリックすると、以下の機能が使えます：
+
+- **URLを開く**: URLを選択して右クリック → 「URLを開く」
+- **Googleで検索**: テキストを選択して右クリック → 「Googleで検索」
+- **箇条書きにする**: 複数行を選択して右クリック → 「箇条書き(-)にする」
+- **箇条書きをやめる**: 箇条書き行を選択して右クリック → 「箇条書きをやめる」
+
+### ワークスペース管理
+
+- **ワークスペースを切り替え**: 左上のプルダウンから選択
+- **ワークスペースを追加**: 左上の + ボタンをクリック
+- **ワークスペースを解除**: プルダウンでワークスペース名を右クリック → 「解除」
+
+## キーボードショートカット
+
+### macOS
+
+- **設定を開く**: Cmd + ,
+- **新しいファイル**: Cmd + N
+- **保存**: Cmd + S（通常は自動保存されます）
+- **フォルダを開く**: Cmd + O
+
+### Windows / Linux
+
+- **設定を開く**: Ctrl + ,
+- **新しいファイル**: Ctrl + N
+- **保存**: Ctrl + S
+- **フォルダを開く**: Ctrl + O
+
+## 設定
+
+設定画面では以下の項目をカスタマイズできます：
+
+- **キーバインド**: Vim、Emacs、標準から選択
+- **テーマ1・テーマ2**: 2つのテーマを登録して 🎨 ボタンで切り替え
+- **フォントサイズ**: 8〜32pxの範囲で設定
+- **行番号表示**: オン/オフ
+- **ワードラップ**: オン/オフ
+- **空白文字表示**: オン/オフ
+
+## トラブルシューティング
+
+### ファイルが表示されない
+
+- ワークスペースフォルダが正しく設定されているか確認してください
+- .md または .txt ファイルのみが表示されます
+- 隠しファイル（.で始まるファイル）は表示されません
+
+### 自動保存が動作しない
+
+- 日本語入力（IME）中は自動保存が一時停止します
+- 変換を確定すると自動保存が再開されます
+
+### タブが復元されない
+
+- ファイルが削除されている場合、そのタブは復元されません
+- ワークスペースごとにセッションが保存されます
+`,
+
+      'サンプル.md': `# サンプル文書
+
+これはmemo3のサンプル文書です。
+
+## Markdownの書き方
+
+### 見出し
+
+# 見出し1
+## 見出し2
+### 見出し3
+
+### 強調
+
+**太字**
+*イタリック*
+~~取り消し線~~
+
+### リスト
+
+- 箇条書き1
+- 箇条書き2
+  - ネストした項目
+  - ネストした項目
+
+1. 番号付きリスト
+2. 番号付きリスト
+3. 番号付きリスト
+
+### リンク
+
+[Googleへのリンク](https://www.google.com)
+
+### コードブロック
+
+\`\`\`javascript
+function hello() {
+  console.log('Hello, memo3!');
+}
+\`\`\`
+
+### 引用
+
+> これは引用です。
+> 複数行にわたって引用できます。
+
+### 水平線
+
+---
+
+### テーブル
+
+| 列1 | 列2 | 列3 |
+|-----|-----|-----|
+| A   | B   | C   |
+| D   | E   | F   |
+
+## メモの活用例
+
+### プロジェクト管理
+
+- [ ] タスク1
+- [x] タスク2（完了）
+- [ ] タスク3
+
+### アイデアメモ
+
+思いついたアイデアをすぐにメモ。
+タグをつけて整理することもできます。
+
+#アイデア #メモ #マークダウン
+
+### 学習ノート
+
+学んだことをまとめておけば、後で検索して簡単に見つけられます。
+
+memo3の検索機能を使えば、すべてのファイルから一瞬で情報を探せます。
+`
+    };
+
+    // 初期ファイルを作成（既に存在する場合は上書きしない）
+    for (const [fileName, content] of Object.entries(initialFiles)) {
+      const filePath = path.join(memo3Folder, fileName);
+      try {
+        await fs.access(filePath);
+        // ファイルが既に存在する場合はスキップ
+      } catch {
+        await fs.writeFile(filePath, content, 'utf8');
+        console.log('Created initial file:', fileName);
+      }
+    }
+
+    // ワークスペースを設定
+    workspaces = [{
+      path: memo3Folder,
+      name: 'memo3',
+      lastAccessed: new Date().toISOString()
+    }];
+    activeWorkspace = memo3Folder;
+    rootFolder = memo3Folder;
+
+    await saveWorkspaces();
+    await scanFiles();
+    setupFileWatcher();
+
+    console.log('First-time setup completed');
+  } catch (error) {
+    console.error('Failed to complete first-time setup:', error);
   }
 }
 
@@ -338,7 +650,7 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   await loadMemos();
-  await loadWorkspace();
+  await loadWorkspaces();
   
   // macOS IMKエラー対策
   if (process.platform === 'darwin') {
@@ -535,28 +847,169 @@ ipcMain.handle('search-files-content', async (event, query) => {
 
 // Session management handlers
 ipcMain.handle('get-session', async () => {
-  return await loadSession();
+  if (activeWorkspace) {
+    return await getWorkspaceSession(activeWorkspace);
+  }
+  return { openTabs: [], activeTabId: null };
 });
 
 ipcMain.handle('save-session', async (_, session) => {
-  return await saveSession(session);
+  if (activeWorkspace) {
+    await saveWorkspaceSession(activeWorkspace, session);
+  }
 });
 
-// フォルダ選択
+// フォルダ選択（レガシー設定画面用）
 ipcMain.handle('select-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
   });
-  
+
   if (!result.canceled && result.filePaths.length > 0) {
     rootFolder = result.filePaths[0];
-    await saveWorkspace();
+    activeWorkspace = rootFolder;
+
+    // ワークスペースリストに追加または更新
+    const existingIndex = workspaces.findIndex(w => w.path === rootFolder);
+    if (existingIndex >= 0) {
+      workspaces[existingIndex].lastAccessed = new Date().toISOString();
+    } else {
+      const folderName = path.basename(rootFolder);
+      workspaces.push({
+        path: rootFolder,
+        name: folderName,
+        lastAccessed: new Date().toISOString()
+      });
+    }
+
+    await saveWorkspaces();
     await scanFiles();
     setupFileWatcher();
     return { success: true, folderPath: rootFolder };
   }
-  
+
   return { success: false };
+});
+
+// ワークスペース管理用IPC handlers
+ipcMain.handle('get-workspaces', async () => {
+  return {
+    workspaces: workspaces.sort((a, b) =>
+      new Date(b.lastAccessed) - new Date(a.lastAccessed)
+    ),
+    activeWorkspace: activeWorkspace
+  };
+});
+
+ipcMain.handle('add-workspace', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'ワークスペースフォルダを選択'
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const selectedPath = result.filePaths[0];
+    const folderName = path.basename(selectedPath);
+
+    // 既に存在する場合は更新
+    const existingIndex = workspaces.findIndex(w => w.path === selectedPath);
+    if (existingIndex >= 0) {
+      workspaces[existingIndex].lastAccessed = new Date().toISOString();
+    } else {
+      // 新規追加
+      workspaces.push({
+        path: selectedPath,
+        name: folderName,
+        lastAccessed: new Date().toISOString()
+      });
+    }
+
+    // アクティブワークスペースを切り替え
+    activeWorkspace = selectedPath;
+    rootFolder = selectedPath;
+
+    await saveWorkspaces();
+    await scanFiles();
+    setupFileWatcher();
+
+    return {
+      success: true,
+      workspace: {
+        path: selectedPath,
+        name: folderName,
+        lastAccessed: new Date().toISOString()
+      }
+    };
+  }
+
+  return { success: false };
+});
+
+ipcMain.handle('switch-workspace', async (_, workspacePath) => {
+  try {
+    // ワークスペースが存在するか確認
+    const workspace = workspaces.find(w => w.path === workspacePath);
+    if (!workspace) {
+      return { success: false, error: 'Workspace not found' };
+    }
+
+    // フォルダが実際に存在するか確認
+    try {
+      await fs.access(workspacePath);
+    } catch {
+      return { success: false, error: 'Workspace folder does not exist' };
+    }
+
+    // lastAccessedを更新
+    workspace.lastAccessed = new Date().toISOString();
+
+    // アクティブワークスペースを切り替え
+    activeWorkspace = workspacePath;
+    rootFolder = workspacePath;
+
+    await saveWorkspaces();
+    await scanFiles();
+    setupFileWatcher();
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('remove-workspace', async (_, workspacePath) => {
+  try {
+    // ワークスペースリストから削除
+    workspaces = workspaces.filter(w => w.path !== workspacePath);
+
+    // 削除したワークスペースがアクティブだった場合
+    if (activeWorkspace === workspacePath) {
+      if (workspaces.length > 0) {
+        // 最近使ったワークスペースをアクティブにする
+        const sorted = workspaces.sort((a, b) =>
+          new Date(b.lastAccessed) - new Date(a.lastAccessed)
+        );
+        activeWorkspace = sorted[0].path;
+        rootFolder = activeWorkspace;
+        await scanFiles();
+        setupFileWatcher();
+      } else {
+        // ワークスペースが空になった場合
+        activeWorkspace = null;
+        rootFolder = null;
+        files = [];
+        if (fileWatcher) {
+          fileWatcher.close();
+          fileWatcher = null;
+        }
+      }
+    }
+
+    await saveWorkspaces();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // URL and search handlers

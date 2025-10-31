@@ -10,8 +10,20 @@
   <div id="app">
     <!-- サイドバー -->
     <div class="sidebar">
-      
-      
+      <!-- ワークスペースセレクター -->
+      <div class="workspace-selector">
+        <div class="workspace-dropdown" id="workspace-dropdown">
+          <button class="workspace-current" id="workspace-current-btn">
+            <span id="workspace-current-name">memo3</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+          <div class="workspace-menu" id="workspace-menu" style="display: none;">
+            <!-- ワークスペースリストが動的に追加される -->
+          </div>
+        </div>
+        <button id="add-workspace-btn" class="btn-add-workspace" title="ワークスペースを追加">+</button>
+      </div>
+
       <div class="search-box">
         <input type="text" id="search-input" placeholder="ファイル名・本文検索...">
         <button id="clear-search-btn" class="btn-clear" title="検索をクリア">×</button>
@@ -80,6 +92,12 @@
       <!-- エディタコンテナ -->
       <div class="editor-workspace" id="editor-workspace">
         <!-- エディタがここに動的に追加される -->
+        <div class="editor-empty-state" id="editor-empty-state">
+          <button id="empty-state-new-btn" class="btn-empty-state" title="新しい文書を作成">
+            <span class="empty-state-icon">+</span>
+            <span class="empty-state-text">新しい文書を作成</span>
+          </button>
+        </div>
       </div>
       
       <div class="status-bar">
