@@ -15,6 +15,7 @@
       <div class="workspace-selector">
         <div class="workspace-dropdown" id="workspace-dropdown">
           <button class="workspace-current" id="workspace-current-btn">
+            <span class="material-symbols-outlined workspace-icon">folder</span>
             <span id="workspace-current-name">memo3</span>
             <span class="dropdown-arrow">▼</span>
           </button>
@@ -26,6 +27,7 @@
 
       <div class="search-container">
         <div class="search-box">
+          <span class="material-symbols-outlined search-icon">search</span>
           <input type="text" id="search-input" placeholder="ファイル名・本文検索...">
           <button id="clear-search-btn" class="btn-clear" title="検索をクリア">×</button>
         </div>
@@ -57,32 +59,22 @@
         </div>
         <div class="editor-actions">
           <button id="preview-btn" class="btn-icon btn-flat" title="プレビュー">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
+            <span class="material-symbols-outlined">preview</span>
           </button>
           <button id="theme-toggle-btn" class="btn-icon btn-flat" title="テーマ切り替え">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
+            <span class="material-symbols-outlined">routine</span>
           </button>
-          <button id="toggle-whitespace-btn" class="btn-icon" title="空白文字の表示/非表示">◯</button>
-          <button id="font-decrease-btn" class="btn-icon" title="フォントサイズを小さく">A-</button>
-          <button id="font-increase-btn" class="btn-icon" title="フォントサイズを大きく">A+</button>
+          <button id="toggle-whitespace-btn" class="btn-icon" title="空白文字の表示/非表示">
+            <span class="material-symbols-outlined">space_bar</span>
+          </button>
+          <button id="font-decrease-btn" class="btn-icon" title="フォントサイズを小さく">
+            <span class="material-symbols-outlined">text_decrease</span>
+          </button>
+          <button id="font-increase-btn" class="btn-icon" title="フォントサイズを大きく">
+            <span class="material-symbols-outlined">text_increase</span>
+          </button>
           <button id="settings-btn" class="btn-icon btn-flat" title="設定">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v10m7.071-1.929l-4.242-4.242m-5.656-5.656L4.93 6.93M23 12h-6m-6 0H1m19.071 7.071l-4.242-4.242m-5.656-5.656L4.93 17.07"></path>
-            </svg>
+            <span class="material-symbols-outlined">settings</span>
           </button>
         </div>
       </div>

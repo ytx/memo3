@@ -832,9 +832,12 @@ async function displayFiles() {
       fileItem.classList.add('text');
     }
     
-    const icon = document.createElement('div');
-    icon.className = 'file-icon';
-    icon.textContent = file.name.endsWith('.md') ? '📄' : '📝';
+    // タグの有無を先に判定
+    const fileTagIds = fileTags.filter(ft => ft.filePath === file.name).map(ft => ft.tagId);
+
+    const icon = document.createElement('span');
+    icon.className = 'file-icon material-symbols-outlined';
+    icon.textContent = fileTagIds.length > 0 ? 'docs' : 'draft';
 
     const fileInfo = document.createElement('div');
     fileInfo.className = 'file-info';
@@ -848,7 +851,6 @@ async function displayFiles() {
     name.textContent = file.name;
 
     // タグアイコンを追加（タグがある場合のみ）
-    const fileTagIds = fileTags.filter(ft => ft.filePath === file.name).map(ft => ft.tagId);
     if (fileTagIds.length > 0) {
       const tagIcon = document.createElement('span');
       tagIcon.className = 'file-tag-icon material-symbols-outlined';
@@ -1170,23 +1172,24 @@ async function createNewFile() {
 }
 
 // ファイルの保存
-async function saveFile(tabId = null) {
+async function saveFile(tabId = null, options = {}) {
+  const { isAutoSave = false } = options;
   const tab = tabId ? tabManager.tabs.find(t => t.id === tabId) : tabManager.getActiveTab();
-  
+
   if (!tab || !tab.file) {
     if (!tabId) showStatus('ファイルが選択されていません');
     return false;
   }
-  
+
   // 変更がない場合は保存をスキップ
   if (!tab.isModified) {
     if (!tabId) showStatus('変更がありません');
     return true;
   }
-  
+
   try {
     const content = editors[tab.id].getValue();
-    
+
     // 現在のファイル内容と比較して実際に変更があるかチェック
     const currentResult = await window.api.loadFile(tab.file.path);
     if (currentResult.success && currentResult.content === content) {
@@ -1194,17 +1197,21 @@ async function saveFile(tabId = null) {
       if (!tabId) showStatus('変更がありません');
       return true;
     }
-    
+
     const result = await window.api.saveFile(tab.file.path, content);
     if (result.success) {
       tab.isModified = false;
-      if (!tabId) showStatus('保存しました'); // 手動保存時のみメッセージ表示
-      
+      if (!tabId) {
+        showStatus('保存しました'); // 手動保存時のみメッセージ表示
+      } else if (isAutoSave) {
+        console.log(`自動保存: ${tab.file.name}`); // 自動保存時のみログ出力
+      }
+
       // ファイルが保存されたら、ファイル一覧を更新（順序を更新するため）
       // 注意: chokidarのchangeイベントでも自動更新されるが、即座の更新のために手動でも実行
       files = await window.api.getFiles();
       displayFiles();
-      
+
       return true;
     } else {
       if (!tabId) showStatus('保存に失敗しました: ' + result.error);
@@ -1240,10 +1247,7 @@ function setupAutoSave(tabId) {
     }
 
     if (tab && tab.isModified && tab.file) {
-      const success = await saveFile(tabId);
-      if (success) {
-        console.log(`自動保存: ${tab.file.name}`);
-      }
+      await saveFile(tabId, { isAutoSave: true });
     }
     delete autoSaveTimers[tabId];
   }, 5000);

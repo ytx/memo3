@@ -1276,11 +1276,6 @@ ipcMain.handle('get-tags', async () => {
   if (!tagsData) {
     tagsData = await mergeAllTagsData(rootFolder);
   }
-  console.log('[get-tags] Returning:', {
-    tagsCount: tagsData.tags.length,
-    fileTagsCount: tagsData.fileTags.length,
-    fileTags: tagsData.fileTags
-  });
   return {
     tags: tagsData.tags,
     fileTags: tagsData.fileTags

@@ -68,7 +68,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 - **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
-- **Material Symbols Icons**: Uses Material Symbols for consistent, scalable iconography
+- **Material Symbols Icons**: Uses Material Symbols for consistent, scalable iconography throughout the UI
+  - File icons: `draft` (untagged), `docs` (tagged)
+  - UI controls: `folder`, `search`, `preview`, `routine`, `space_bar`, `text_decrease`, `text_increase`, `settings`, `sell`
+  - All icons use `var(--text-color)` for theme-consistent coloring
 
 ### IPC Communication Channels
 **File Management**
@@ -229,7 +232,16 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Markdown Preview**: Separate window for live markdown preview with dark/light mode toggle
 - **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in, reload buttons in top-right corner
 - **Preview Reload**: Manually refresh preview content from current active tab
-- **Preview Rendering**: Proper hierarchy display with aligned headings, nested lists, and horizontal rules (----)
+- **Preview Rendering**: Complete markdown support including:
+  - Headings (h1-h6) with proper hierarchy and borders
+  - Bold, italic, and strikethrough (`~~text~~`)
+  - Nested bullet and numbered lists with indentation
+  - Code blocks with syntax preservation (no extra line breaks)
+  - Inline code with background highlighting
+  - Block quotes with proper consolidation
+  - Tables with pipe-delimited syntax (`| Header | Header |`)
+  - Horizontal rules (`---` and `****`)
+  - Links and images
 - **Preview Print Support**: Print preview with proper formatting, no scrollbars, word-wrap for long lines
 - **Preview Independence**: Preview window shows snapshot of content, doesn't change with tab switching
 - **Enhanced Search Box**: Properly positioned search interface with theme integration

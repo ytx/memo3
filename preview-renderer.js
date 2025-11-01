@@ -6,13 +6,22 @@ function markdownToHtml(markdown) {
 
   let html = markdown;
 
-  // コードブロック（```）を処理
+  // コードブロックを一時的に保護
+  const codeBlocks = [];
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+    const trimmedCode = code.replace(/^\n+|\n+$/g, '');
+    const placeholder = `@@@CODEBLOCK${codeBlocks.length}@@@`;
+    codeBlocks.push(`<pre><code>${escapeHtml(trimmedCode)}</code></pre>`);
+    return placeholder;
   });
 
-  // インラインコード（`）を処理
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // インラインコード（`）を一時的に保護
+  const inlineCodes = [];
+  html = html.replace(/`([^`]+)`/g, (match, code) => {
+    const placeholder = `@@@INLINECODE${inlineCodes.length}@@@`;
+    inlineCodes.push(`<code>${code}</code>`);
+    return placeholder;
+  });
 
   // ヘッダー
   html = html.replace(/^######\s+(.*)$/gm, '<h6>$1</h6>');
@@ -21,6 +30,9 @@ function markdownToHtml(markdown) {
   html = html.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
   html = html.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
   html = html.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
+
+  // 取消線
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
 
   // 太字
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -36,12 +48,56 @@ function markdownToHtml(markdown) {
   // 画像
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
 
-  // 引用
-  html = html.replace(/^>\s+(.*)$/gm, '<blockquote>$1</blockquote>');
-
   // 水平線（リストの前に処理）
-  html = html.replace(/^----+$/gm, '<hr>');
+  html = html.replace(/^---+$/gm, '<hr>');
   html = html.replace(/^\*\*\*+$/gm, '<hr>');
+
+  // 表の処理
+  function processTable(lines, startIndex) {
+    const tableLines = [];
+    let i = startIndex;
+
+    // テーブル行を収集
+    while (i < lines.length && lines[i].trim().startsWith('|')) {
+      tableLines.push(lines[i]);
+      i++;
+    }
+
+    if (tableLines.length < 2) {
+      return { html: '', nextIndex: startIndex };
+    }
+
+    // ヘッダー行
+    const headerCells = tableLines[0].split('|').map(cell => cell.trim()).filter(cell => cell);
+    const headerRow = '<tr>' + headerCells.map(cell => `<th>${cell}</th>`).join('') + '</tr>';
+
+    // 区切り行をスキップ（2行目）
+
+    // データ行
+    const dataRows = tableLines.slice(2).map(line => {
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+      return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+    }).join('');
+
+    const tableHtml = `<table><thead>${headerRow}</thead><tbody>${dataRows}</tbody></table>`;
+
+    return { html: tableHtml, nextIndex: i };
+  }
+
+  // 引用の処理（連続する引用をまとめる）
+  function processBlockquote(lines, startIndex) {
+    const quoteLines = [];
+    let i = startIndex;
+
+    while (i < lines.length && lines[i].trim().startsWith('>')) {
+      const content = lines[i].replace(/^>\s*/, '');
+      quoteLines.push(content);
+      i++;
+    }
+
+    const quoteHtml = '<blockquote>' + quoteLines.join('<br>') + '</blockquote>';
+    return { html: quoteHtml, nextIndex: i };
+  }
 
   // リスト処理（ネストを含む）
   function buildList(lines, startIndex) {
@@ -121,6 +177,24 @@ function markdownToHtml(markdown) {
   while (i < lines.length) {
     const line = lines[i];
 
+    // 表の検出
+    if (line.trim().startsWith('|')) {
+      const result = processTable(lines, i);
+      if (result.html) {
+        processedLines.push(result.html);
+        i = result.nextIndex;
+        continue;
+      }
+    }
+
+    // 引用の検出
+    if (line.trim().startsWith('>')) {
+      const result = processBlockquote(lines, i);
+      processedLines.push(result.html);
+      i = result.nextIndex;
+      continue;
+    }
+
     // 順序なしリストの検出
     if (line.match(/^(\s*)[-*]\s+(.*)$/)) {
       const result = buildList(lines, i);
@@ -151,8 +225,16 @@ function markdownToHtml(markdown) {
   for (let line of paragraphLines) {
     const trimmed = line.trim();
 
+    // プレースホルダーはそのまま
+    if (trimmed.match(/^@@@CODEBLOCK\d+@@@$/) || trimmed.match(/^@@@INLINECODE\d+@@@$/)) {
+      if (inParagraph) {
+        processed.push('</p>');
+        inParagraph = false;
+      }
+      processed.push(line);
+    }
     // 既にタグがある行はそのまま
-    if (trimmed.match(/^<(h[1-6]|ul|ol|li|blockquote|pre|hr|code)/)) {
+    else if (trimmed.match(/^<(h[1-6]|ul|ol|li|blockquote|pre|hr|code|table|del)/)) {
       if (inParagraph) {
         processed.push('</p>');
         inParagraph = false;
@@ -180,7 +262,20 @@ function markdownToHtml(markdown) {
     processed.push('</p>');
   }
 
-  return processed.join('\n');
+  html = processed.join('\n');
+
+  // プレースホルダーを実際のコードに戻す
+  codeBlocks.forEach((code, index) => {
+    const placeholder = `@@@CODEBLOCK${index}@@@`;
+    html = html.split(placeholder).join(code);
+  });
+
+  inlineCodes.forEach((code, index) => {
+    const placeholder = `@@@INLINECODE${index}@@@`;
+    html = html.split(placeholder).join(code);
+  });
+
+  return html;
 }
 
 function escapeHtml(text) {
