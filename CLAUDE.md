@@ -62,16 +62,16 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
-- **File List Display**: Shows title (first non-empty line), filename, full modification date/time, and tag icons with hover details
+- **File List Display**: Shows title (first non-empty line), filename, full modification date/time, and color-coded icons (untagged: draft, tagged: docs with first tag's color)
 - **Context Menus**: Right-click files for rename/delete/tag management, right-click status bar for developer tools
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 - **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
 - **Material Symbols Icons**: Uses Material Symbols for consistent, scalable iconography throughout the UI
-  - File icons: `draft` (untagged), `docs` (tagged)
+  - File icons: `draft` (untagged with default color), `docs` (tagged with first tag's color)
   - UI controls: `folder`, `search`, `preview`, `routine`, `space_bar`, `text_decrease`, `text_increase`, `settings`, `sell`
-  - All icons use `var(--text-color)` for theme-consistent coloring
+  - All icons use `var(--text-color)` for theme-consistent coloring (except file icons with tag colors)
 
 ### IPC Communication Channels
 **File Management**
@@ -155,17 +155,22 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Tag Filter Integration**: Combine text search with tag filters for precise results
 
 **Tag Management System**
-- **Tag Creation**: Create tags with custom names and colors from 16-color palette
+- **Tag Creation**: Create tags with custom names and colors from 16-color palette in settings or tag dialog
 - **Quick Tag Creation**: Type tag name in search box and press Enter to create instantly
-- **File Tagging**: Right-click files to open tag dialog, click tags to toggle assignment
-- **Tag Editing**: Right-click tags in dialog for edit/delete menu, unified dialog for name and color
-- **Tag Filtering**: Three-state filter (show/hide/none) accessible via Material Symbols icon button
-- **Visual Indicators**: Files with tags show icon in file list, hover to see tag details
-- **Compact Badge Design**: Tags displayed as small, rounded badges (11px font, 6px radius)
+- **Settings Management**: Dedicated "Tags" tab in settings dialog for creating, editing, deleting, and reordering tags
+- **Drag & Drop Ordering**: Reorder tags by dragging in settings, order persists across all displays
+- **File Tagging**: Right-click files to open tag dialog (sell icon button in file header), click tags to toggle assignment
+- **Tag Editing**: Right-click tags in settings or tag dialog for edit/delete menu, unified dialog for name and color
+- **Tag Filtering**: Three-state filter (show/hide/none) accessible via Material Symbols sell icon button
+- **Filter Clear Button**: "クリア" button in tag filter header to reset all filters at once
+- **Visual Indicators**: File header shows tag badges after filename, file list icons show first tag's color
+- **Compact Badge Design**: Tags displayed as small, rounded badges (11px font, 6px radius) in file header
+- **Consistent Order Display**: Tags appear in same order (defined in settings) across file header, tag filter, and file icon colors
 - **Color Palette**: 16 predefined colors (red, pink, purple, blue, cyan, teal, green, lime, yellow, amber, orange, brown)
 - **Event-Sourced Sync**: Log-based data structure enables conflict-free multi-PC synchronization
 - **Search Integration**: Text search and tag filters work together seamlessly
 - **Session Persistence**: Tag filter states saved per workspace session
+- **Simplified Dialog**: Tag assignment dialog shows only search box, tag list, and close button for streamlined UX
 
 **Multiple Workspace Management**
 - **Workspace Selector UI**: Dropdown in sidebar showing current workspace name with add button
@@ -208,6 +213,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 **File List Improvements**
 - **Three-Line Display**: Shows title, filename, and full date/time (YYYY/MM/DD HH:MM)
 - **Content-Based Titles**: Uses first non-empty line as display title
+- **Color-Coded Icons**: Untagged files show draft icon, tagged files show docs icon with first tag's color
 - **Real-Time Sorting**: Automatically reorders by modification time when files change
 - **Clean Interface**: Removed file list header and new file button for minimal design
 
@@ -283,12 +289,15 @@ This is an Electron-based memo application with ACE editor integration for markd
 28. **Unified Button Colors**: New tab (+) button in tab bar matches workspace add (+) button color (blue)
 29. **Search with Line Jump**: Type "機能" in search box → Results show matched lines with "行 5" label → Click "行 5" → File opens and scrolls to line 5 with cursor positioned
 30. **Bullet List Indentation**: Type "- Item 1" → Press Enter → Type "Item 2" → Press Tab → Line indents to "  - Item 2" → Press Shift+Tab → Line outdents back to "- Item 2"
-31. **Create Tag**: Click tag filter button (sell icon) → Tag list appears → Type "重要" in filter box → Press Enter → New tag created with random color from palette
-32. **Assign Tag to File**: Right-click file → "タグを編集" → Tag dialog opens → Click "重要" tag → Tag becomes colored (assigned) → Click again → Tag becomes transparent (unassigned)
-33. **Edit Tag**: In tag dialog → Right-click "重要" tag → Select "編集" → Change name to "優先度高" and select red color from palette → Save → Tag updated everywhere
-34. **Filter by Tag**: Click tag filter button → Click "優先度高" tag once (shows) → Only files with that tag appear → Click again (hides) → Files with that tag hidden → Click again (none) → All files shown
-35. **Tag with Search**: Type "TODO" in search box → Click tag filter button → Set "優先度高" to show → Only files containing "TODO" AND tagged "優先度高" appear
-36. **Tag Icon in File List**: File with tags shows sell icon next to filename → Hover over icon → Tooltip appears showing all tag badges with colors
+31. **Create Tag in Settings**: Settings → Tags tab → Type "重要" in search box → Press Enter → New tag created with random color from palette
+32. **Reorder Tags**: Settings → Tags tab → Drag "重要" tag above other tags → Order updates everywhere (file header, tag filter, file icon colors)
+33. **Assign Tag to File**: Right-click file → "タグを編集" → Tag dialog opens → Click "重要" tag → Tag becomes colored (assigned) → Click again → Tag becomes transparent (unassigned)
+34. **Tag Badge Display**: Open file with tags → File header shows tag badges after filename in order → Click sell icon button → Tag dialog opens for editing
+35. **Edit Tag**: Settings → Tags tab → Right-click "重要" tag → Select "編集" → Change name to "優先度高" and select red color from palette → Save → Tag updated everywhere
+36. **Filter by Tag**: Click tag filter button → Click "優先度高" tag once (shows) → Only files with that tag appear → Click again (hides) → Files with that tag hidden → Click again (none) → All files shown
+37. **Clear Tag Filters**: Click tag filter button → Set multiple tags to show/hide → Click "クリア" button in header → All filters reset, all files shown
+38. **Tag with Search**: Type "TODO" in search box → Click tag filter button → Set "優先度高" to show → Only files containing "TODO" AND tagged "優先度高" appear
+39. **File Icon Colors**: File with tags shows docs icon in file list → Icon color matches first tag's color (by order) → Reorder tags in settings → Icon color updates to new first tag
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

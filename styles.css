@@ -321,11 +321,31 @@ body {
 }
 
 .tag-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 8px 15px;
   font-size: 12px;
   font-weight: bold;
   color: var(--text-secondary-color);
   background: var(--bg-color);
+}
+
+.btn-clear-filter {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.btn-clear-filter:hover {
+  background: var(--button-color);
+  color: white;
+  border-color: var(--button-color);
 }
 
 .tag-list {
@@ -598,45 +618,6 @@ body {
   color: #858585;
 }
 
-/* ファイルリストのタグアイコン */
-.file-tag-icon {
-  margin-left: 6px;
-  font-size: 16px;
-  cursor: help;
-  position: relative;
-  display: inline-block;
-  vertical-align: middle;
-  color: var(--text-color);
-}
-
-.file-tag-tooltip {
-  visibility: hidden;
-  position: fixed;
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 10000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.file-tag-icon:hover .file-tag-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
-.file-tag-tooltip-tag {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 8px;
-  margin: 0 2px;
-  font-size: 11px;
-}
-
 /* 旧メモリストとの互換性のため残す */
 .memo-list {
   flex: 1;
@@ -729,12 +710,55 @@ body {
   padding: 2px 5px;
 }
 
+.file-path-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .file-path {
   color: var(--text-color);
   font-size: 14px;
   font-family: monospace;
   padding: 2px 5px;
   font-weight: 500;
+}
+
+.file-tags-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.file-tag-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: white;
+  font-weight: 500;
+}
+
+.btn-icon-small {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-small .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-color);
+}
+
+.btn-icon-small:hover {
+  background: var(--border-color);
 }
 
 .btn-icon:disabled {
@@ -1059,9 +1083,17 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+.settings-dialog-content {
+  width: 600px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .dialog-content h2 {
   margin-bottom: 20px;
   color: var(--text-color);
+  flex-shrink: 0;
 }
 
 .settings-group {
@@ -1098,11 +1130,132 @@ body {
   margin-right: 8px;
 }
 
+/* 設定ダイアログのタブ */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.settings-tab {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  color: var(--text-secondary-color);
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.settings-tab:hover {
+  color: var(--text-color);
+  background: var(--border-color);
+}
+
+.settings-tab.active {
+  color: var(--text-color);
+  border-bottom-color: var(--button-color);
+}
+
+.settings-tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.settings-tab-pane {
+  display: none;
+}
+
+.settings-tab-pane.active {
+  display: block;
+}
+
+/* タグ管理（設定内） */
+.settings-tag-list {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  min-height: 250px;
+  max-height: 350px;
+  overflow-y: auto;
+  background: var(--bg-color);
+}
+
+.settings-tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--sidebar-color);
+  border-radius: 4px;
+  transition: background 0.2s;
+  cursor: grab;
+}
+
+.settings-tag-item:active {
+  cursor: grabbing;
+}
+
+.settings-tag-item.dragging {
+  opacity: 0.5;
+}
+
+.settings-tag-item:hover {
+  background: var(--border-color);
+}
+
+.settings-tag-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.settings-tag-color-box {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.settings-tag-text {
+  color: var(--text-color);
+  font-size: 13px;
+}
+
+.settings-tag-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-tag-actions button {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.settings-tag-actions button:hover {
+  background: var(--button-color);
+  color: white;
+  border-color: var(--button-color);
+}
+
 .dialog-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  margin-top: 30px;
+  margin-top: 20px;
+  flex-shrink: 0;
 }
 
 .dialog-actions .btn-primary,
@@ -1117,15 +1270,7 @@ body {
   max-width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-}
-
-.tag-dialog-file-info {
-  padding: 10px 15px;
-  background: var(--bg-color);
-  border-radius: 4px;
-  margin-bottom: 20px;
-  color: var(--text-color);
-  font-size: 14px;
+  padding: 15px;
 }
 
 /* タグ検索ボックス */

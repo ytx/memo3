@@ -835,9 +835,20 @@ async function displayFiles() {
     // タグの有無を先に判定
     const fileTagIds = fileTags.filter(ft => ft.filePath === file.name).map(ft => ft.tagId);
 
+    // タグをorder順にソート
+    const sortedTags = fileTagIds
+      .map(tagId => tags.find(t => t.id === tagId))
+      .filter(tag => tag !== undefined)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
     const icon = document.createElement('span');
     icon.className = 'file-icon material-symbols-outlined';
     icon.textContent = fileTagIds.length > 0 ? 'docs' : 'draft';
+
+    // タグがある場合は先頭のタグの色を適用
+    if (sortedTags.length > 0) {
+      icon.style.color = sortedTags[0].color;
+    }
 
     const fileInfo = document.createElement('div');
     fileInfo.className = 'file-info';
@@ -849,54 +860,6 @@ async function displayFiles() {
     const name = document.createElement('div');
     name.className = 'file-name';
     name.textContent = file.name;
-
-    // タグアイコンを追加（タグがある場合のみ）
-    if (fileTagIds.length > 0) {
-      const tagIcon = document.createElement('span');
-      tagIcon.className = 'file-tag-icon material-symbols-outlined';
-      tagIcon.textContent = 'sell';
-
-      // ツールチップを作成
-      const tooltip = document.createElement('div');
-      tooltip.className = 'file-tag-tooltip';
-
-      fileTagIds.forEach(tagId => {
-        const tag = tags.find(t => t.id === tagId);
-        if (tag) {
-          const tagSpan = document.createElement('span');
-          tagSpan.className = 'file-tag-tooltip-tag';
-          tagSpan.textContent = tag.name;
-          tagSpan.style.backgroundColor = tag.color;
-          tagSpan.style.color = 'white';
-          tooltip.appendChild(tagSpan);
-        }
-      });
-
-      tagIcon.appendChild(tooltip);
-
-      // ツールチップの位置を動的に調整
-      tagIcon.addEventListener('mouseenter', (e) => {
-        const iconRect = tagIcon.getBoundingClientRect();
-        const tooltipRect = tooltip.getBoundingClientRect();
-
-        // アイコンの右側に表示（画面外に出ないように調整）
-        let left = iconRect.right + 5;
-        let top = iconRect.top;
-
-        if (left + tooltipRect.width > window.innerWidth) {
-          left = iconRect.left - tooltipRect.width - 5;
-        }
-
-        if (top + tooltipRect.height > window.innerHeight) {
-          top = window.innerHeight - tooltipRect.height - 5;
-        }
-
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-      });
-
-      name.appendChild(tagIcon);
-    }
     
     const modTime = document.createElement('div');
     modTime.className = 'file-mod-time';
@@ -1002,13 +965,45 @@ async function openFileInTab(file) {
 // 現在のファイルパス表示を更新
 function updateCurrentFilePath() {
   const filePathElement = document.getElementById('current-file-path');
+  const fileTagsDisplay = document.getElementById('file-tags-display');
+  const editFileTagsBtn = document.getElementById('edit-file-tags-btn');
   const activeTab = tabManager.getActiveTab();
-  
+
   if (activeTab && activeTab.file) {
     filePathElement.textContent = activeTab.file.relativePath || activeTab.file.name;
+
+    // タグバッジを表示
+    updateFileTagsDisplay(activeTab.file.name);
+
+    // 編集ボタンを表示
+    editFileTagsBtn.style.display = 'flex';
   } else {
     filePathElement.textContent = 'ファイルが選択されていません';
+    fileTagsDisplay.innerHTML = '';
+    editFileTagsBtn.style.display = 'none';
   }
+}
+
+// ファイル名の後ろのタグバッジを更新
+function updateFileTagsDisplay(fileName) {
+  const fileTagsDisplay = document.getElementById('file-tags-display');
+  fileTagsDisplay.innerHTML = '';
+
+  const fileTagIds = fileTags.filter(ft => ft.filePath === fileName).map(ft => ft.tagId);
+
+  // タグをorder順にソート
+  const fileTags_sorted = fileTagIds
+    .map(tagId => tags.find(t => t.id === tagId))
+    .filter(tag => tag !== undefined)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  fileTags_sorted.forEach(tag => {
+    const badge = document.createElement('span');
+    badge.className = 'file-tag-badge';
+    badge.textContent = tag.name;
+    badge.style.backgroundColor = tag.color;
+    fileTagsDisplay.appendChild(badge);
+  });
 }
 
 // ユニークなファイル名を生成
@@ -2206,10 +2201,10 @@ function showStatus(message) {
 }
 
 // 設定ダイアログの表示
-function showSettings() {
+async function showSettings() {
   const dialog = document.getElementById('settings-dialog');
   dialog.classList.remove('hidden');
-  
+
   // 現在の設定を反映
   document.getElementById('current-folder-display').value = rootFolder || '';
   document.getElementById('keybinding-select').value = settings.keybinding || '';
@@ -2218,12 +2213,205 @@ function showSettings() {
   document.getElementById('font-size').value = settings.fontSize;
   document.getElementById('word-wrap').checked = settings.wordWrap;
   document.getElementById('show-line-numbers').checked = settings.showLineNumbers;
+
+  // タグタブの内容をロード
+  await loadTagsForSettings();
 }
 
 // 設定ダイアログを閉じる
 function hideSettings() {
   const dialog = document.getElementById('settings-dialog');
   dialog.classList.add('hidden');
+
+  // タグの並び順が変更された可能性があるため、表示を更新
+  updateCurrentFilePath(); // ファイルヘッダーのタグバッジ
+  renderTagList(); // タグフィルターのタグリスト
+}
+
+// 設定タブの切り替え
+function switchSettingsTab(tabName) {
+  // すべてのタブとペインから active を削除
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelectorAll('.settings-tab-pane').forEach(pane => {
+    pane.classList.remove('active');
+  });
+
+  // 選択されたタブとペインに active を追加
+  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById(`settings-tab-${tabName}`).classList.add('active');
+}
+
+// タグタブ用のタグ一覧を読み込み
+async function loadTagsForSettings() {
+  await loadTags();
+
+  // 検索ボックスをクリア
+  document.getElementById('settings-tag-search-input').value = '';
+  settingsTagSearchQuery = '';
+
+  renderSettingsTagList();
+}
+
+// タグ一覧を描画（設定画面内）
+let settingsTagSearchQuery = '';
+
+function renderSettingsTagList() {
+  const tagList = document.getElementById('settings-tag-list');
+  tagList.innerHTML = '';
+
+  // 検索クエリでフィルタ
+  const filteredTags = tags.filter(tag =>
+    tag.name.toLowerCase().includes(settingsTagSearchQuery.toLowerCase())
+  );
+
+  if (filteredTags.length === 0) {
+    tagList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary-color); font-size: 12px;">タグがありません</div>';
+    return;
+  }
+
+  filteredTags.forEach((tag, index) => {
+    const item = document.createElement('div');
+    item.className = 'settings-tag-item';
+    item.dataset.tagId = tag.id;
+    item.dataset.index = index;
+    item.draggable = true;
+
+    // 左側：カラーボックスとタグ名
+    const nameSection = document.createElement('div');
+    nameSection.className = 'settings-tag-name';
+
+    const colorBox = document.createElement('div');
+    colorBox.className = 'settings-tag-color-box';
+    colorBox.style.backgroundColor = tag.color;
+
+    const nameText = document.createElement('span');
+    nameText.className = 'settings-tag-text';
+    nameText.textContent = tag.name;
+
+    nameSection.appendChild(colorBox);
+    nameSection.appendChild(nameText);
+
+    // 右側：編集・削除ボタン
+    const actions = document.createElement('div');
+    actions.className = 'settings-tag-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '編集';
+    editBtn.addEventListener('click', () => {
+      openEditTagDialog(tag);
+    });
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '削除';
+    deleteBtn.addEventListener('click', () => {
+      deleteTagFromSettings(tag);
+    });
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    item.appendChild(nameSection);
+    item.appendChild(actions);
+
+    // ドラッグ&ドロップイベント
+    item.addEventListener('dragstart', handleSettingsTagDragStart);
+    item.addEventListener('dragover', handleSettingsTagDragOver);
+    item.addEventListener('drop', handleSettingsTagDrop);
+    item.addEventListener('dragend', handleSettingsTagDragEnd);
+
+    tagList.appendChild(item);
+  });
+}
+
+// ドラッグ&ドロップでタグの順序を変更（設定画面）
+let draggedSettingsTagIndex = null;
+
+function handleSettingsTagDragStart(e) {
+  draggedSettingsTagIndex = parseInt(e.target.dataset.index);
+  e.target.classList.add('dragging');
+}
+
+function handleSettingsTagDragOver(e) {
+  e.preventDefault();
+}
+
+async function handleSettingsTagDrop(e) {
+  e.preventDefault();
+  const dropIndex = parseInt(e.currentTarget.dataset.index);
+
+  if (draggedSettingsTagIndex !== null && draggedSettingsTagIndex !== dropIndex) {
+    // 検索クエリでフィルタされているかチェック
+    const filteredTags = tags.filter(tag =>
+      tag.name.toLowerCase().includes(settingsTagSearchQuery.toLowerCase())
+    );
+
+    // フィルタされたリスト内での入れ替え
+    const draggedTag = filteredTags[draggedSettingsTagIndex];
+    const targetTag = filteredTags[dropIndex];
+
+    // 元のtagsリスト内でのインデックスを取得
+    const draggedOriginalIndex = tags.findIndex(t => t.id === draggedTag.id);
+    const targetOriginalIndex = tags.findIndex(t => t.id === targetTag.id);
+
+    // タグの順序を入れ替え
+    tags.splice(draggedOriginalIndex, 1);
+    const newTargetIndex = tags.findIndex(t => t.id === targetTag.id);
+    tags.splice(newTargetIndex, 0, draggedTag);
+
+    // 順序を更新してサーバーに保存
+    for (let i = 0; i < tags.length; i++) {
+      tags[i].order = i;
+      await window.api.updateTag(tags[i].id, { order: i });
+    }
+
+    renderSettingsTagList();
+    displayFiles(); // ファイルリストを更新してタグの順序を反映
+  }
+}
+
+function handleSettingsTagDragEnd(e) {
+  e.target.classList.remove('dragging');
+  draggedSettingsTagIndex = null;
+}
+
+// 設定画面でタグを削除
+async function deleteTagFromSettings(tag) {
+  if (!confirm(`タグ「${tag.name}」を削除しますか？\nこのタグが割り当てられているすべてのファイルから削除されます。`)) {
+    return;
+  }
+
+  const result = await window.api.deleteTag(tag.id);
+  if (result.success) {
+    await loadTagsForSettings();
+    displayFiles(); // ファイルリストを更新
+  }
+}
+
+// 設定画面でタグを新規作成
+async function createTagFromSettings(name) {
+  const trimmedName = name.trim();
+  if (!trimmedName) return;
+
+  // 既存のタグ名をチェック
+  if (tags.find(t => t.name === trimmedName)) {
+    alert(`タグ「${trimmedName}」は既に存在します。`);
+    return;
+  }
+
+  const randomColor = TAG_COLOR_PALETTE[Math.floor(Math.random() * TAG_COLOR_PALETTE.length)];
+  const result = await window.api.createTag({
+    name: trimmedName,
+    color: randomColor,
+    order: tags.length
+  });
+
+  if (result.success) {
+    await loadTagsForSettings();
+    document.getElementById('settings-tag-search-input').value = '';
+    settingsTagSearchQuery = '';
+  }
 }
 
 // ACEエディタのテーマに基づいてアプリのテーマを更新
@@ -2463,13 +2651,13 @@ async function init() {
   files = await window.api.getFiles();
   rootFolder = await window.api.getRootFolder();
 
+  // タグデータを読み込み（ファイル表示前に必要）
+  await loadTags();
+
   updateRootFolderPath();
   displayFiles();
   updateFileStatus();
   updateCurrentFilePath();
-
-  // タグデータを読み込み
-  await loadTags();
 
   // セッションを復元
   await tabManager.restoreSession();
@@ -2513,7 +2701,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('settings-btn').addEventListener('click', showSettings);
   document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
   document.getElementById('cancel-settings-btn').addEventListener('click', hideSettings);
-  
+
+  // 設定タブの切り替え
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      const tabName = e.target.dataset.tab;
+      switchSettingsTab(tabName);
+    });
+  });
+
+  // 設定画面のタグ検索
+  document.getElementById('settings-tag-search-input').addEventListener('input', (e) => {
+    settingsTagSearchQuery = e.target.value;
+    renderSettingsTagList();
+  });
+
+  document.getElementById('settings-tag-search-clear-btn').addEventListener('click', () => {
+    document.getElementById('settings-tag-search-input').value = '';
+    settingsTagSearchQuery = '';
+    renderSettingsTagList();
+  });
+
+  // 設定画面のタグ検索でEnterキーで新規作成
+  document.getElementById('settings-tag-search-input').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      await createTagFromSettings(settingsTagSearchQuery);
+    }
+  });
+
   // フォルダ選択ボタン
   document.getElementById('folder-select-btn').addEventListener('click', async () => {
     const result = await window.api.selectFolder();
@@ -2533,6 +2748,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // タグフィルター
   document.getElementById('toggle-tags-btn').addEventListener('click', toggleTagFilter);
+  document.getElementById('clear-tag-filter-btn').addEventListener('click', clearAllTagFilters);
 
   // コンテキストメニュー
   document.getElementById('context-rename').addEventListener('click', renameFileFromContext);
@@ -2569,6 +2785,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('edit-tag-cancel-btn').addEventListener('click', closeEditTagDialog);
   document.getElementById('edit-tag-name-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') saveEditTag();
+  });
+
+  // ファイルタグ編集ボタン（画面上部）
+  document.getElementById('edit-file-tags-btn').addEventListener('click', async () => {
+    const activeTab = tabManager.getActiveTab();
+    if (activeTab && activeTab.file) {
+      await openTagDialog(activeTab.file);
+    }
   });
 
   // ステータスバー用コンテキストメニュー
@@ -3090,7 +3314,10 @@ function renderTagList() {
     return;
   }
 
-  tags.forEach(tag => {
+  // タグをorder順にソート
+  const sortedTags = [...tags].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  sortedTags.forEach(tag => {
     const tagItem = document.createElement('div');
     tagItem.className = 'tag-item';
 
@@ -3152,6 +3379,20 @@ function updateTagFilterButton() {
   } else {
     button.classList.remove('active');
   }
+}
+
+// タグフィルターをすべてクリア
+async function clearAllTagFilters() {
+  // すべてのタグフィルターステータスを'none'にリセット
+  tagFilterStatus = {};
+
+  // 表示を更新
+  renderTagList();
+  displayFiles();
+  updateTagFilterButton();
+
+  // セッションに保存
+  await saveTagFilterToSession();
 }
 
 // タグステータスを3状態でサイクル
@@ -3262,10 +3503,6 @@ async function openTagDialog(file) {
   // ダイアログを表示
   const dialog = document.getElementById('tag-dialog');
   dialog.classList.remove('hidden');
-
-  // ファイル名を表示
-  const fileInfo = document.getElementById('tag-dialog-file-info');
-  fileInfo.textContent = `ファイル: ${file.title || file.name}`;
 
   // 検索ボックスをクリア
   const searchInput = document.getElementById('tag-search-input');
@@ -3575,6 +3812,12 @@ function closeEditTagDialog() {
   const dialog = document.getElementById('edit-tag-dialog');
   dialog.classList.add('hidden');
   editingTagId = null;
+
+  // 設定画面のタグリストを更新
+  const settingsDialog = document.getElementById('settings-dialog');
+  if (!settingsDialog.classList.contains('hidden')) {
+    renderSettingsTagList();
+  }
 }
 
 // タグダイアログを閉じる
@@ -3582,50 +3825,8 @@ function closeTagDialog() {
   const dialog = document.getElementById('tag-dialog');
   dialog.classList.add('hidden');
   currentTagDialogFile = null;
+
+  // タグバッジを更新
+  updateCurrentFilePath();
 }
 
-// ドラッグ&ドロップでタグの順序を変更
-let draggedTagIndex = null;
-
-function handleTagDragStart(e) {
-  draggedTagIndex = parseInt(e.target.dataset.index);
-  e.target.classList.add('dragging');
-}
-
-function handleTagDragOver(e) {
-  e.preventDefault();
-}
-
-function handleTagDrop(e) {
-  e.preventDefault();
-  const dropIndex = parseInt(e.currentTarget.dataset.index);
-
-  if (draggedTagIndex !== null && draggedTagIndex !== dropIndex) {
-    // 配列を並び替え
-    const [movedTag] = editingTags.splice(draggedTagIndex, 1);
-    editingTags.splice(dropIndex, 0, movedTag);
-
-    // orderを更新
-    saveTagOrder();
-  }
-}
-
-function handleTagDragEnd(e) {
-  e.target.classList.remove('dragging');
-  draggedTagIndex = null;
-}
-
-// タグの順序を保存
-async function saveTagOrder() {
-  try {
-    for (let i = 0; i < editingTags.length; i++) {
-      await window.api.updateTag(editingTags[i].id, { order: i });
-    }
-    await loadTags();
-    editingTags = JSON.parse(JSON.stringify(tags));
-    renderTagManageList();
-    renderTagList(); // サイドバーのタグリストも更新
-  } catch (error) {
-    console.error('Failed to save tag order:', error);
-  }
-}

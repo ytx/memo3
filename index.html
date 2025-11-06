@@ -35,7 +35,10 @@
       </div>
 
       <div class="tag-filter" id="tag-filter" style="display: none;">
-        <div class="tag-filter-header">タグフィルター</div>
+        <div class="tag-filter-header">
+          <span>タグフィルター</span>
+          <button id="clear-tag-filter-btn" class="btn-clear-filter" title="フィルターをクリア">クリア</button>
+        </div>
         <div class="tag-list" id="tag-list">
           <!-- タグリストが動的に追加される -->
         </div>
@@ -55,7 +58,13 @@
       <div class="editor-header">
         <div class="file-info">
           <div class="folder-path" id="root-folder-path">フォルダを選択してください</div>
-          <div class="file-path" id="current-file-path">ファイルが選択されていません</div>
+          <div class="file-path-container">
+            <div class="file-path" id="current-file-path">ファイルが選択されていません</div>
+            <div class="file-tags-display" id="file-tags-display"></div>
+            <button id="edit-file-tags-btn" class="btn-icon-small" title="タグを編集" style="display: none;">
+              <span class="material-symbols-outlined">sell</span>
+            </button>
+          </div>
         </div>
         <div class="editor-actions">
           <button id="preview-btn" class="btn-icon btn-flat" title="プレビュー">
@@ -112,73 +121,107 @@
   
   <!-- 設定ダイアログ -->
   <div id="settings-dialog" class="dialog hidden">
-    <div class="dialog-content">
+    <div class="dialog-content settings-dialog-content">
       <h2>設定</h2>
-      
-      <div class="settings-group">
-        <label for="current-folder-display">作業フォルダ:</label>
-        <input type="text" id="current-folder-display" readonly placeholder="フォルダが選択されていません">
-        <div style="text-align: right; margin-top: 8px;">
-          <button type="button" id="folder-select-btn" class="btn-secondary">選択</button>
-        </div>
-      </div>
-      
-      <div class="settings-group">
-        <label for="keybinding-select">キーバインド:</label>
-        <select id="keybinding-select">
-          <option value="">標準</option>
-          <option value="ace/keyboard/vim">Vim</option>
-          <option value="ace/keyboard/emacs">Emacs</option>
-          <option value="ace/keyboard/sublime">Sublime</option>
-          <option value="ace/keyboard/vscode">VSCode</option>
-        </select>
-      </div>
-      
-      <div class="settings-group">
-        <label for="theme-select">テーマ1:</label>
-        <select id="theme-select">
-          <option value="ace/theme/monokai">Monokai</option>
-          <option value="ace/theme/github">GitHub</option>
-          <option value="ace/theme/tomorrow">Tomorrow</option>
-          <option value="ace/theme/twilight">Twilight</option>
-          <option value="ace/theme/solarized_dark">Solarized Dark</option>
-          <option value="ace/theme/solarized_light">Solarized Light</option>
-          <option value="ace/theme/dracula">Dracula</option>
-        </select>
+
+      <!-- タブナビゲーション -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="general">全般</button>
+        <button class="settings-tab" data-tab="editor">エディタ</button>
+        <button class="settings-tab" data-tab="tags">タグ</button>
       </div>
 
-      <div class="settings-group">
-        <label for="theme-preset2">テーマ2:</label>
-        <select id="theme-preset2">
-          <option value="ace/theme/monokai">Monokai</option>
-          <option value="ace/theme/github">GitHub</option>
-          <option value="ace/theme/tomorrow">Tomorrow</option>
-          <option value="ace/theme/twilight">Twilight</option>
-          <option value="ace/theme/solarized_dark">Solarized Dark</option>
-          <option value="ace/theme/solarized_light">Solarized Light</option>
-          <option value="ace/theme/dracula">Dracula</option>
-        </select>
+      <!-- タブコンテンツ -->
+      <div class="settings-tab-content">
+        <!-- 全般タブ -->
+        <div id="settings-tab-general" class="settings-tab-pane active">
+          <div class="settings-group">
+            <label for="current-folder-display">作業フォルダ:</label>
+            <input type="text" id="current-folder-display" readonly placeholder="フォルダが選択されていません">
+            <div style="text-align: right; margin-top: 8px;">
+              <button type="button" id="folder-select-btn" class="btn-secondary">選択</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- エディタタブ -->
+        <div id="settings-tab-editor" class="settings-tab-pane">
+          <div class="settings-group">
+            <label for="keybinding-select">キーバインド:</label>
+            <select id="keybinding-select">
+              <option value="">標準</option>
+              <option value="ace/keyboard/vim">Vim</option>
+              <option value="ace/keyboard/emacs">Emacs</option>
+              <option value="ace/keyboard/sublime">Sublime</option>
+              <option value="ace/keyboard/vscode">VSCode</option>
+            </select>
+          </div>
+
+          <div class="settings-group">
+            <label for="theme-select">テーマ1:</label>
+            <select id="theme-select">
+              <option value="ace/theme/monokai">Monokai</option>
+              <option value="ace/theme/github">GitHub</option>
+              <option value="ace/theme/tomorrow">Tomorrow</option>
+              <option value="ace/theme/twilight">Twilight</option>
+              <option value="ace/theme/solarized_dark">Solarized Dark</option>
+              <option value="ace/theme/solarized_light">Solarized Light</option>
+              <option value="ace/theme/dracula">Dracula</option>
+            </select>
+          </div>
+
+          <div class="settings-group">
+            <label for="theme-preset2">テーマ2:</label>
+            <select id="theme-preset2">
+              <option value="ace/theme/monokai">Monokai</option>
+              <option value="ace/theme/github">GitHub</option>
+              <option value="ace/theme/tomorrow">Tomorrow</option>
+              <option value="ace/theme/twilight">Twilight</option>
+              <option value="ace/theme/solarized_dark">Solarized Dark</option>
+              <option value="ace/theme/solarized_light">Solarized Light</option>
+              <option value="ace/theme/dracula">Dracula</option>
+            </select>
+          </div>
+
+          <div class="settings-group">
+            <label for="font-size">フォントサイズ:</label>
+            <input type="number" id="font-size" min="10" max="30" value="14">
+          </div>
+
+          <div class="settings-group">
+            <label>
+              <input type="checkbox" id="word-wrap">
+              折り返し表示
+            </label>
+          </div>
+
+          <div class="settings-group">
+            <label>
+              <input type="checkbox" id="show-line-numbers">
+              行番号を表示
+            </label>
+          </div>
+        </div>
+
+        <!-- タグタブ -->
+        <div id="settings-tab-tags" class="settings-tab-pane">
+          <div class="settings-group">
+            <label>タグ検索:</label>
+            <div class="tag-search-box">
+              <input type="text" id="settings-tag-search-input" placeholder="タグを検索... (Enterで新規作成)">
+              <button id="settings-tag-search-clear-btn" class="btn-clear" title="クリア">×</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label>タグ一覧:</label>
+            <div id="settings-tag-list" class="settings-tag-list">
+              <!-- タグリストが表示される -->
+            </div>
+          </div>
+        </div>
       </div>
-      
-      <div class="settings-group">
-        <label for="font-size">フォントサイズ:</label>
-        <input type="number" id="font-size" min="10" max="30" value="14">
-      </div>
-      
-      <div class="settings-group">
-        <label>
-          <input type="checkbox" id="word-wrap">
-          折り返し表示
-        </label>
-      </div>
-      
-      <div class="settings-group">
-        <label>
-          <input type="checkbox" id="show-line-numbers">
-          行番号を表示
-        </label>
-      </div>
-      
+
       <div class="dialog-actions">
         <button id="save-settings-btn" class="btn-primary">保存</button>
         <button id="cancel-settings-btn" class="btn-secondary">キャンセル</button>
@@ -189,11 +232,6 @@
   <!-- タグ管理ダイアログ -->
   <div id="tag-dialog" class="dialog hidden">
     <div class="dialog-content tag-dialog-content">
-      <h2>タグ管理</h2>
-      <div class="tag-dialog-file-info" id="tag-dialog-file-info">
-        <!-- ファイル名が表示される -->
-      </div>
-
       <!-- 検索/追加ボックス -->
       <div class="tag-search-box">
         <input type="text" id="tag-search-input" placeholder="タグを検索または追加...">
