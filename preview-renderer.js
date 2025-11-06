@@ -69,14 +69,33 @@ function markdownToHtml(markdown) {
 
     // ヘッダー行
     const headerCells = tableLines[0].split('|').map(cell => cell.trim()).filter(cell => cell);
-    const headerRow = '<tr>' + headerCells.map(cell => `<th>${cell}</th>`).join('') + '</tr>';
 
-    // 区切り行をスキップ（2行目）
+    // 区切り行から配置情報を取得（2行目）
+    const separatorCells = tableLines[1].split('|').map(cell => cell.trim()).filter(cell => cell);
+    const alignments = separatorCells.map(sep => {
+      if (sep.startsWith(':') && sep.endsWith(':')) {
+        return 'center';
+      } else if (sep.endsWith(':')) {
+        return 'right';
+      } else {
+        return 'left';
+      }
+    });
+
+    const headerRow = '<tr>' + headerCells.map((cell, index) => {
+      const align = alignments[index] || 'left';
+      // <br>タグはそのまま保持（改行として表示される）
+      return `<th style="text-align: ${align}">${cell}</th>`;
+    }).join('') + '</tr>';
 
     // データ行
     const dataRows = tableLines.slice(2).map(line => {
       const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
-      return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+      return '<tr>' + cells.map((cell, index) => {
+        const align = alignments[index] || 'left';
+        // <br>タグはそのまま保持（改行として表示される）
+        return `<td style="text-align: ${align}">${cell}</td>`;
+      }).join('') + '</tr>';
     }).join('');
 
     const tableHtml = `<table><thead>${headerRow}</thead><tbody>${dataRows}</tbody></table>`;

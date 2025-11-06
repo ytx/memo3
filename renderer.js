@@ -1932,7 +1932,31 @@ function showEditorContextMenu(event, tabId) {
       }
     }
   );
-  
+
+  // 表メニュー
+  menuItems.push({ separator: true });
+
+  // カーソル位置に表があるかチェック
+  const tableAtCursor = detectTableAtCursor(editor);
+
+  if (tableAtCursor) {
+    menuItems.push({
+      text: '表を編集',
+      action: () => {
+        openTableEditorForEdit(editor);
+        hideEditorContextMenu();
+      }
+    });
+  } else {
+    menuItems.push({
+      text: '表を追加',
+      action: () => {
+        openTableEditorForNew();
+        hideEditorContextMenu();
+      }
+    });
+  }
+
   // メニューアイテムを作成
   menuItems.forEach(item => {
     if (item.separator) {
@@ -2757,6 +2781,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // タグダイアログ
   document.getElementById('tag-dialog-close-btn').addEventListener('click', closeTagDialog);
+
+  // 表編集ダイアログ
+  document.getElementById('table-add-row-above').addEventListener('click', addRowAbove);
+  document.getElementById('table-add-row-below').addEventListener('click', addRowBelow);
+  document.getElementById('table-delete-row').addEventListener('click', deleteRow);
+  document.getElementById('table-add-col-left').addEventListener('click', addColumnLeft);
+  document.getElementById('table-add-col-right').addEventListener('click', addColumnRight);
+  document.getElementById('table-delete-col').addEventListener('click', deleteColumn);
+  document.getElementById('table-editor-save-btn').addEventListener('click', saveTable);
+  document.getElementById('table-editor-cancel-btn').addEventListener('click', closeTableEditor);
 
   // タグ検索ボックス
   document.getElementById('tag-search-input').addEventListener('input', (e) => {
@@ -3828,5 +3862,534 @@ function closeTagDialog() {
 
   // タグバッジを更新
   updateCurrentFilePath();
+}
+
+// ========================
+// 表編集機能
+// ========================
+
+let tableEditorData = {
+  headers: [],
+  rows: [],
+  alignments: [],
+  isEditMode: false,
+  originalRange: null,
+  selectedRow: -1,
+  selectedCol: -1
+};
+
+// マークダウン表のパース
+function parseMarkdownTable(markdown) {
+  const lines = markdown.trim().split('\n').filter(line => line.trim());
+
+  if (lines.length < 2) {
+    return null; // 最低2行必要（ヘッダー + 区切り行）
+  }
+
+  // ヘッダー行のパース
+  const headerLine = lines[0].trim();
+  const headers = headerLine.split('|')
+    .map(cell => cell.trim())
+    .filter((cell, index, arr) => {
+      // 最初と最後の空要素を除外
+      return !(index === 0 && cell === '') && !(index === arr.length - 1 && cell === '');
+    })
+    .map(cell => cell.replace(/<br>/g, '\n')); // <br>を改行に変換
+
+  // 区切り行のパース（配置情報）
+  const separatorLine = lines[1].trim();
+  const separators = separatorLine.split('|')
+    .map(cell => cell.trim())
+    .filter((cell, index, arr) => {
+      return !(index === 0 && cell === '') && !(index === arr.length - 1 && cell === '');
+    });
+
+  const alignments = separators.map(sep => {
+    if (sep.startsWith(':') && sep.endsWith(':')) {
+      return 'center';
+    } else if (sep.endsWith(':')) {
+      return 'right';
+    } else {
+      return 'left';
+    }
+  });
+
+  // データ行のパース
+  const rows = [];
+  for (let i = 2; i < lines.length; i++) {
+    const rowLine = lines[i].trim();
+    const cells = rowLine.split('|')
+      .map(cell => cell.trim())
+      .filter((cell, index, arr) => {
+        return !(index === 0 && cell === '') && !(index === arr.length - 1 && cell === '');
+      })
+      .map(cell => cell.replace(/<br>/g, '\n')); // <br>を改行に変換
+
+    rows.push(cells);
+  }
+
+  return {
+    headers,
+    rows,
+    alignments
+  };
+}
+
+// マークダウン表の生成
+function generateMarkdownTable() {
+  const { headers, rows, alignments } = tableEditorData;
+
+  // ヘッダー行
+  const headerCells = headers.map(h => h.replace(/\n/g, '<br>')); // 改行を<br>に変換
+  const headerLine = '| ' + headerCells.join(' | ') + ' |';
+
+  // 区切り行
+  const separators = alignments.map(align => {
+    switch (align) {
+      case 'center': return ':---:';
+      case 'right': return '---:';
+      default: return '---';
+    }
+  });
+  const separatorLine = '| ' + separators.join(' | ') + ' |';
+
+  // データ行
+  const dataLines = rows.map(row => {
+    const cells = row.map(cell => (cell || '').replace(/\n/g, '<br>')); // 改行を<br>に変換
+    return '| ' + cells.join(' | ') + ' |';
+  });
+
+  return [headerLine, separatorLine, ...dataLines].join('\n');
+}
+
+// 編集UIの構築
+function buildTableEditor() {
+  const { headers, rows, alignments } = tableEditorData;
+  const tableArea = document.getElementById('table-editor-area');
+
+  // テーブル要素の作成
+  const table = document.createElement('table');
+  table.className = 'editable-table';
+
+  // ヘッダー行
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headers.forEach((header, colIndex) => {
+    const th = document.createElement('th');
+    th.contentEditable = 'true';
+    th.innerHTML = header.replace(/\n/g, '<br>');
+    th.dataset.col = colIndex;
+
+    // セルクリックで列選択
+    th.addEventListener('click', () => selectColumn(colIndex));
+
+    // Enterキーで<br>を挿入
+    th.addEventListener('keydown', handleCellKeydown);
+
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+
+  // 配置ボタン行
+  const alignmentRow = document.createElement('tr');
+  alignmentRow.className = 'alignment-row';
+  alignments.forEach((align, colIndex) => {
+    const td = document.createElement('td');
+    td.dataset.col = colIndex;
+
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'alignment-buttons';
+
+    ['left', 'center', 'right'].forEach(alignment => {
+      const btn = document.createElement('button');
+      btn.className = 'alignment-btn' + (align === alignment ? ' active' : '');
+      btn.textContent = alignment === 'left' ? '◀' : alignment === 'center' ? '■' : '▶';
+      btn.dataset.alignment = alignment;
+      btn.addEventListener('click', () => setColumnAlignment(colIndex, alignment));
+      buttonsDiv.appendChild(btn);
+    });
+
+    td.appendChild(buttonsDiv);
+    alignmentRow.appendChild(td);
+  });
+  thead.appendChild(alignmentRow);
+  table.appendChild(thead);
+
+  // データ行
+  const tbody = document.createElement('tbody');
+  rows.forEach((row, rowIndex) => {
+    const tr = document.createElement('tr');
+    tr.dataset.row = rowIndex;
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement('td');
+      td.contentEditable = 'true';
+      td.innerHTML = (cell || '').replace(/\n/g, '<br>');
+      td.dataset.row = rowIndex;
+      td.dataset.col = colIndex;
+
+      // セルクリックで行選択
+      td.addEventListener('click', () => selectCell(rowIndex, colIndex));
+
+      // Enterキーで<br>を挿入
+      td.addEventListener('keydown', handleCellKeydown);
+
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  tableArea.innerHTML = '';
+  tableArea.appendChild(table);
+}
+
+// セル内でのEnterキー処理
+function handleCellKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+
+    // 選択範囲を取得
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+
+    // <br>要素を挿入
+    const br = document.createElement('br');
+    range.deleteContents();
+    range.insertNode(br);
+
+    // カーソルを<br>の後ろに移動
+    range.setStartAfter(br);
+    range.setEndAfter(br);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
+// 列の配置を設定
+function setColumnAlignment(colIndex, alignment) {
+  tableEditorData.alignments[colIndex] = alignment;
+
+  // UIを更新
+  const alignmentRow = document.querySelector('.alignment-row');
+  const alignmentCell = alignmentRow.children[colIndex];
+  const buttons = alignmentCell.querySelectorAll('.alignment-btn');
+
+  buttons.forEach(btn => {
+    if (btn.dataset.alignment === alignment) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+// セルを選択
+function selectCell(rowIndex, colIndex) {
+  tableEditorData.selectedRow = rowIndex;
+  tableEditorData.selectedCol = colIndex;
+
+  // 既存のハイライトを削除
+  document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
+  document.querySelectorAll('.selected-col').forEach(el => el.classList.remove('selected-col'));
+
+  // 行をハイライト
+  const rows = document.querySelectorAll('.editable-table tbody tr');
+  if (rows[rowIndex]) {
+    rows[rowIndex].classList.add('selected-row');
+  }
+
+  // 列をハイライト
+  document.querySelectorAll(`[data-col="${colIndex}"]`).forEach(el => {
+    if (el.tagName === 'TH' || el.tagName === 'TD') {
+      el.classList.add('selected-col');
+    }
+  });
+}
+
+// 列を選択
+function selectColumn(colIndex) {
+  tableEditorData.selectedCol = colIndex;
+  tableEditorData.selectedRow = -1;
+
+  // 既存のハイライトを削除
+  document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
+  document.querySelectorAll('.selected-col').forEach(el => el.classList.remove('selected-col'));
+
+  // 列をハイライト
+  document.querySelectorAll(`[data-col="${colIndex}"]`).forEach(el => {
+    if (el.tagName === 'TH' || el.tagName === 'TD') {
+      el.classList.add('selected-col');
+    }
+  });
+}
+
+// 上に行を追加
+function addRowAbove() {
+  const { selectedRow } = tableEditorData;
+  if (selectedRow < 0) {
+    alert('行を選択してください');
+    return;
+  }
+
+  const newRow = new Array(tableEditorData.headers.length).fill('');
+  tableEditorData.rows.splice(selectedRow, 0, newRow);
+
+  buildTableEditor();
+  selectCell(selectedRow, tableEditorData.selectedCol);
+}
+
+// 下に行を追加
+function addRowBelow() {
+  const { selectedRow } = tableEditorData;
+  if (selectedRow < 0) {
+    alert('行を選択してください');
+    return;
+  }
+
+  const newRow = new Array(tableEditorData.headers.length).fill('');
+  tableEditorData.rows.splice(selectedRow + 1, 0, newRow);
+
+  buildTableEditor();
+  selectCell(selectedRow + 1, tableEditorData.selectedCol);
+}
+
+// 行を削除
+function deleteRow() {
+  const { selectedRow } = tableEditorData;
+  if (selectedRow < 0) {
+    alert('行を選択してください');
+    return;
+  }
+
+  if (tableEditorData.rows.length <= 1) {
+    alert('最低1行は必要です');
+    return;
+  }
+
+  tableEditorData.rows.splice(selectedRow, 1);
+
+  const newSelectedRow = Math.min(selectedRow, tableEditorData.rows.length - 1);
+  buildTableEditor();
+  selectCell(newSelectedRow, tableEditorData.selectedCol);
+}
+
+// 左に列を追加
+function addColumnLeft() {
+  const { selectedCol } = tableEditorData;
+  if (selectedCol < 0) {
+    alert('列を選択してください');
+    return;
+  }
+
+  tableEditorData.headers.splice(selectedCol, 0, '');
+  tableEditorData.alignments.splice(selectedCol, 0, 'left');
+  tableEditorData.rows.forEach(row => row.splice(selectedCol, 0, ''));
+
+  buildTableEditor();
+  selectColumn(selectedCol);
+}
+
+// 右に列を追加
+function addColumnRight() {
+  const { selectedCol } = tableEditorData;
+  if (selectedCol < 0) {
+    alert('列を選択してください');
+    return;
+  }
+
+  tableEditorData.headers.splice(selectedCol + 1, 0, '');
+  tableEditorData.alignments.splice(selectedCol + 1, 0, 'left');
+  tableEditorData.rows.forEach(row => row.splice(selectedCol + 1, 0, ''));
+
+  buildTableEditor();
+  selectColumn(selectedCol + 1);
+}
+
+// 列を削除
+function deleteColumn() {
+  const { selectedCol } = tableEditorData;
+  if (selectedCol < 0) {
+    alert('列を選択してください');
+    return;
+  }
+
+  if (tableEditorData.headers.length <= 2) {
+    alert('最低2列は必要です');
+    return;
+  }
+
+  tableEditorData.headers.splice(selectedCol, 1);
+  tableEditorData.alignments.splice(selectedCol, 1);
+  tableEditorData.rows.forEach(row => row.splice(selectedCol, 1));
+
+  const newSelectedCol = Math.min(selectedCol, tableEditorData.headers.length - 1);
+  buildTableEditor();
+  selectColumn(newSelectedCol);
+}
+
+// UIからデータを更新
+function updateTableDataFromUI() {
+  // ヘッダー
+  const headerCells = document.querySelectorAll('.editable-table thead tr:first-child th');
+  tableEditorData.headers = Array.from(headerCells).map(th => {
+    // innerHTMLから<br>を改行に変換、末尾の改行を削除
+    return th.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/\n+$/, '');
+  });
+
+  // データ行
+  const dataRows = document.querySelectorAll('.editable-table tbody tr');
+  tableEditorData.rows = Array.from(dataRows).map(tr => {
+    const cells = tr.querySelectorAll('td');
+    return Array.from(cells).map(td => {
+      // innerHTMLから<br>を改行に変換、末尾の改行を削除
+      return td.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/\n+$/, '');
+    });
+  });
+}
+
+// カーソル位置の表を検出
+function detectTableAtCursor(editor) {
+  const cursor = editor.getCursorPosition();
+  const currentLine = editor.session.getLine(cursor.row);
+
+  // 現在行が表の一部かチェック
+  if (!currentLine.trim().startsWith('|')) {
+    return null;
+  }
+
+  // 表の開始行を探す
+  let startRow = cursor.row;
+  while (startRow > 0) {
+    const line = editor.session.getLine(startRow - 1);
+    if (!line.trim().startsWith('|')) {
+      break;
+    }
+    startRow--;
+  }
+
+  // 表の終了行を探す
+  let endRow = cursor.row;
+  const totalLines = editor.session.getLength();
+  while (endRow < totalLines - 1) {
+    const line = editor.session.getLine(endRow + 1);
+    if (!line.trim().startsWith('|')) {
+      break;
+    }
+    endRow++;
+  }
+
+  // 表のテキストを取得
+  const lines = [];
+  for (let i = startRow; i <= endRow; i++) {
+    lines.push(editor.session.getLine(i));
+  }
+
+  return {
+    markdown: lines.join('\n'),
+    startRow,
+    endRow
+  };
+}
+
+// 表編集ダイアログを開く（新規追加）
+function openTableEditorForNew() {
+  // デフォルトの3列x3行の表
+  tableEditorData = {
+    headers: ['', '', ''],
+    rows: [
+      ['', '', ''],
+      ['', '', '']
+    ],
+    alignments: ['left', 'left', 'left'],
+    isEditMode: false,
+    originalRange: null,
+    selectedRow: 0,
+    selectedCol: 0
+  };
+
+  const dialog = document.getElementById('table-editor-dialog');
+  dialog.classList.remove('hidden');
+
+  buildTableEditor();
+  selectCell(0, 0);
+}
+
+// 表編集ダイアログを開く（編集）
+function openTableEditorForEdit(editor) {
+  const tableInfo = detectTableAtCursor(editor);
+  if (!tableInfo) {
+    alert('カーソル位置に表が見つかりません');
+    return;
+  }
+
+  const parsedTable = parseMarkdownTable(tableInfo.markdown);
+  if (!parsedTable) {
+    alert('表の形式が正しくありません');
+    return;
+  }
+
+  tableEditorData = {
+    ...parsedTable,
+    isEditMode: true,
+    originalRange: {
+      startRow: tableInfo.startRow,
+      endRow: tableInfo.endRow
+    },
+    selectedRow: 0,
+    selectedCol: 0
+  };
+
+  const dialog = document.getElementById('table-editor-dialog');
+  dialog.classList.remove('hidden');
+
+  buildTableEditor();
+  selectCell(0, 0);
+}
+
+// 表を保存
+function saveTable() {
+  const activeTab = tabManager.getActiveTab();
+  if (!activeTab || !editors[activeTab.id]) {
+    return;
+  }
+
+  const editor = editors[activeTab.id];
+
+  // UIからデータを更新
+  updateTableDataFromUI();
+
+  // マークダウンを生成
+  const markdown = generateMarkdownTable();
+
+  if (tableEditorData.isEditMode) {
+    // 編集モード：既存の表を置換
+    const { startRow, endRow } = tableEditorData.originalRange;
+    const range = new ace.Range(startRow, 0, endRow, editor.session.getLine(endRow).length);
+    editor.session.replace(range, markdown);
+  } else {
+    // 新規追加モード：カーソル位置に挿入
+    const cursor = editor.getCursorPosition();
+    editor.session.insert(cursor, '\n' + markdown + '\n');
+  }
+
+  closeTableEditor();
+}
+
+// 表編集ダイアログを閉じる
+function closeTableEditor() {
+  const dialog = document.getElementById('table-editor-dialog');
+  dialog.classList.add('hidden');
+
+  tableEditorData = {
+    headers: [],
+    rows: [],
+    alignments: [],
+    isEditMode: false,
+    originalRange: null,
+    selectedRow: -1,
+    selectedCol: -1
+  };
 }
 

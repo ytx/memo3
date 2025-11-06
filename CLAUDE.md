@@ -63,7 +63,8 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
 - **File List Display**: Shows title (first non-empty line), filename, full modification date/time, and color-coded icons (untagged: draft, tagged: docs with first tag's color)
-- **Context Menus**: Right-click files for rename/delete/tag management, right-click status bar for developer tools
+- **Context Menus**: Right-click files for rename/delete/tag management, right-click status bar for developer tools, right-click in editor for table operations
+- **Markdown Table Editor**: WYSIWYG table editing with modal dialog, supports cell line breaks, column alignment, and full table operations
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
@@ -220,7 +221,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Context Menu System**
 - **File Context Menu**: Right-click files for "ファイル名更新" (filename update) and "削除" (delete)
 - **Status Bar Context Menu**: Right-click status bar for "開発者ツール" (developer tools)
-- **Editor Context Menu**: Right-click in editor for URL opening, Google search, standard editing functions, and bullet list operations
+- **Editor Context Menu**: Right-click in editor for URL opening, Google search, standard editing functions, bullet list operations, and table operations
 - **Bullet List Operations**: Add/remove bullet points for selected lines
   - "箇条書き(-)にする": Add "- " prefix to each selected line (preserves leading whitespace)
   - "箇条書き(1)にする": Add "1. " prefix to each selected line (preserves leading whitespace)
@@ -228,6 +229,11 @@ This is an Electron-based memo application with ACE editor integration for markd
   - **Tab Key Indent**: Press Tab on bullet list line to increase indentation (adds 2 spaces)
   - **Shift+Tab Outdent**: Press Shift+Tab on bullet list line to decrease indentation (removes 2 spaces)
   - Full Undo/Redo support for all bullet operations
+- **Table Operations**: Add/edit markdown tables via context menu
+  - "表を追加": Insert new 3×3 table at cursor position
+  - "表を編集": Edit existing table when cursor is on table row
+  - WYSIWYG editing with visual table interface
+  - Full table manipulation: add/delete rows and columns, edit cells, set alignment
 - **Smart Positioning**: Context menus automatically adjust position to stay within screen bounds
 - **Filename Updates**: Auto-generates new filenames based on file content, preserves extensions
 - **Safety Confirmations**: Confirmation dialogs before file deletion
@@ -235,6 +241,16 @@ This is an Electron-based memo application with ACE editor integration for markd
 **Advanced Editor Features**
 - **URL Detection**: Automatically detects URLs in text, right-click to open in browser
 - **Text Selection Search**: Select text and right-click to search on Google
+- **Markdown Table Editor**: WYSIWYG table editing in modal dialog
+  - **Access**: Right-click in editor → "表を追加" (new table) or "表を編集" (edit table at cursor)
+  - **Table Operations**: Add/delete rows (above/below), add/delete columns (left/right)
+  - **Cell Editing**: contentEditable cells with Enter key for line breaks (`<br>` tags)
+  - **Column Alignment**: Left/center/right alignment controls per column
+  - **Default Size**: New tables start as 3 columns × 3 rows (1 header + 2 data rows)
+  - **Minimum Size**: 2 columns × 2 rows enforced
+  - **Markdown Format**: Standard pipe-delimited syntax with alignment markers (`:---:`, `---:`)
+  - **Line Break Support**: Cell content can contain multiple lines using `<br>` in markdown
+  - **Preview Integration**: Alignment and line breaks render correctly in preview window
 - **Markdown Preview**: Separate window for live markdown preview with dark/light mode toggle
 - **Preview Controls**: Theme toggle, print, zoom out, 1:1 (reset), zoom in, reload buttons in top-right corner
 - **Preview Reload**: Manually refresh preview content from current active tab
@@ -245,7 +261,7 @@ This is an Electron-based memo application with ACE editor integration for markd
   - Code blocks with syntax preservation (no extra line breaks)
   - Inline code with background highlighting
   - Block quotes with proper consolidation
-  - Tables with pipe-delimited syntax (`| Header | Header |`)
+  - Tables with pipe-delimited syntax and alignment (`| Header | Header |`, `:---:`, `---:`)
   - Horizontal rules (`---` and `****`)
   - Links and images
 - **Preview Print Support**: Print preview with proper formatting, no scrollbars, word-wrap for long lines
@@ -298,6 +314,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 37. **Clear Tag Filters**: Click tag filter button → Set multiple tags to show/hide → Click "クリア" button in header → All filters reset, all files shown
 38. **Tag with Search**: Type "TODO" in search box → Click tag filter button → Set "優先度高" to show → Only files containing "TODO" AND tagged "優先度高" appear
 39. **File Icon Colors**: File with tags shows docs icon in file list → Icon color matches first tag's color (by order) → Reorder tags in settings → Icon color updates to new first tag
+40. **Add New Table**: Right-click in editor → "表を追加" → Modal dialog opens with 3×3 table → Edit cells (Enter for line breaks) → Set column alignments → Save → Markdown table inserted at cursor
+41. **Edit Existing Table**: Position cursor on table row → Right-click → "表を編集" → Modal opens with table data → Add row above/below → Delete column → Edit cells → Change alignment → Save → Table updated in place
+42. **Table Cell Line Breaks**: In table editor → Click cell → Type "Line 1" → Press Enter → Type "Line 2" → Save → Markdown shows `Line 1<br>Line 2` → Preview displays as two lines
+43. **Table Alignment**: In table editor → Click column header → Click center alignment (■) button → All cells in column get center alignment → Save → Markdown separator shows `:---:` → Preview displays centered text
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

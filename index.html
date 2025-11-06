@@ -273,6 +273,34 @@
     </div>
   </div>
 
+  <!-- 表編集ダイアログ -->
+  <div id="table-editor-dialog" class="dialog hidden">
+    <div class="dialog-content table-editor-content">
+      <h2>表を編集</h2>
+
+      <!-- ツールバー -->
+      <div class="table-toolbar">
+        <button id="table-add-row-above" class="btn-secondary">+行(上)</button>
+        <button id="table-add-row-below" class="btn-secondary">+行(下)</button>
+        <button id="table-delete-row" class="btn-secondary">行削除</button>
+        <button id="table-add-col-left" class="btn-secondary">+列(左)</button>
+        <button id="table-add-col-right" class="btn-secondary">+列(右)</button>
+        <button id="table-delete-col" class="btn-secondary">列削除</button>
+      </div>
+
+      <!-- 表編集エリア -->
+      <div class="table-editor-area" id="table-editor-area">
+        <!-- 動的に生成されるテーブル -->
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="dialog-actions">
+        <button id="table-editor-save-btn" class="btn-primary">保存</button>
+        <button id="table-editor-cancel-btn" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <!-- コンテキストメニュー -->
   <div id="context-menu" class="context-menu">
     <div id="context-edit-tags" class="context-menu-item">タグを編集</div>

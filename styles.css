@@ -1505,3 +1505,121 @@ input[type="color"] {
   background: #ff4444 !important;
   color: #fff !important;
 }
+
+/* ========================
+   表編集ダイアログ
+   ======================== */
+
+.table-editor-content {
+  width: 800px;
+  max-width: 90%;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 15px;
+  flex-shrink: 0;
+}
+
+.table-toolbar button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.table-editor-area {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 15px;
+  background: var(--bg-color);
+  min-height: 0;
+}
+
+.editable-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.editable-table th,
+.editable-table td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  min-width: 80px;
+  background: var(--sidebar-color);
+  color: var(--text-color);
+  vertical-align: top;
+}
+
+.editable-table th {
+  background: var(--bg-color);
+  font-weight: bold;
+}
+
+.editable-table td[contenteditable="true"],
+.editable-table th[contenteditable="true"] {
+  cursor: text;
+  outline: none;
+}
+
+.editable-table td[contenteditable="true"]:focus,
+.editable-table th[contenteditable="true"]:focus {
+  background: var(--bg-color);
+  box-shadow: inset 0 0 0 2px var(--button-color);
+}
+
+.alignment-row {
+  background: var(--border-color);
+}
+
+.alignment-row td {
+  padding: 4px;
+  text-align: center;
+  background: var(--border-color);
+}
+
+.alignment-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.alignment-btn {
+  background: var(--sidebar-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.alignment-btn:hover {
+  background: var(--border-color);
+}
+
+.alignment-btn.active {
+  background: var(--button-color);
+  color: white;
+  border-color: var(--button-color);
+}
+
+.editable-table tr.selected-row td,
+.editable-table tr.selected-row th {
+  background: var(--button-color);
+  opacity: 0.3;
+}
+
+.editable-table td.selected-col,
+.editable-table th.selected-col {
+  background: var(--button-color);
+  opacity: 0.3;
+}
