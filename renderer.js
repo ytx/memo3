@@ -206,6 +206,26 @@ class TabManager {
     return this.tabs.find(tab => tab.id === this.activeTabId);
   }
 
+  switchToNextTab() {
+    if (this.tabs.length <= 1) return;
+
+    const currentIndex = this.tabs.findIndex(tab => tab.id === this.activeTabId);
+    if (currentIndex === -1) return;
+
+    const nextIndex = (currentIndex + 1) % this.tabs.length;
+    this.switchToTab(this.tabs[nextIndex].id);
+  }
+
+  switchToPreviousTab() {
+    if (this.tabs.length <= 1) return;
+
+    const currentIndex = this.tabs.findIndex(tab => tab.id === this.activeTabId);
+    if (currentIndex === -1) return;
+
+    const previousIndex = (currentIndex - 1 + this.tabs.length) % this.tabs.length;
+    this.switchToTab(this.tabs[previousIndex].id);
+  }
+
   renderTabs() {
     const tabList = document.getElementById('tab-list');
     tabList.innerHTML = '';
@@ -2943,6 +2963,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.metaKey && !e.ctrlKey && e.key === 'n') {
       e.preventDefault();
       createNewTabWithFile();
+      return;
+    }
+
+    // Ctrl+Tab: 次のタブに切り替え
+    if (e.ctrlKey && e.key === 'Tab' && !e.shiftKey && !e.metaKey) {
+      e.preventDefault();
+      tabManager.switchToNextTab();
+      return;
+    }
+
+    // Ctrl+Shift+Tab: 前のタブに切り替え
+    if (e.ctrlKey && e.shiftKey && e.key === 'Tab' && !e.metaKey) {
+      e.preventDefault();
+      tabManager.switchToPreviousTab();
       return;
     }
 

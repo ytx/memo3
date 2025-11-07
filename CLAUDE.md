@@ -196,6 +196,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 
 **Tab Management Enhancements**
 - **Drag-and-Drop Reordering**: Drag tabs to reorder them with visual feedback
+- **Keyboard Navigation**: Ctrl+Tab for next tab, Ctrl+Shift+Tab for previous tab (circular navigation)
 - **Tab Scroll Buttons**: Left (‹) and right (›) arrow buttons on either side of tab list for scrolling when many tabs are open
 - **Smart Layout**: Left scroll button on left side, right scroll button on right side, prevents overflow issues
 - **Smart Button States**: Scroll buttons auto-disable at edges of tab list
@@ -318,6 +319,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 41. **Edit Existing Table**: Position cursor on table row → Right-click → "表を編集" → Modal opens with table data → Add row above/below → Delete column → Edit cells → Change alignment → Save → Table updated in place
 42. **Table Cell Line Breaks**: In table editor → Click cell → Type "Line 1" → Press Enter → Type "Line 2" → Save → Markdown shows `Line 1<br>Line 2` → Preview displays as two lines
 43. **Table Alignment**: In table editor → Click column header → Click center alignment (■) button → All cells in column get center alignment → Save → Markdown separator shows `:---:` → Preview displays centered text
+44. **Tab Navigation with Keyboard**: Open 3 files in tabs → Press Ctrl+Tab → Switches to next tab → Press Ctrl+Tab again → Switches to third tab → Press Ctrl+Tab once more → Returns to first tab (circular) → Press Ctrl+Shift+Tab → Goes back to third tab
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)
