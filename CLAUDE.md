@@ -306,7 +306,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 24. **Workspace Session Independence**: Open file1.md and file2.md in "ProjectA" → Switch to "memo3" → Open file3.md → Switch back to "ProjectA" → file1.md and file2.md tabs restored exactly as left
 25. **Unsaved New Tab Protection**: Create new tab → Type "Hello\nWorld" → Switch workspace → Dialog appears: "未保存の新規タブがあります: - Hello (2行)" → Click OK → File "Hello.md" saved automatically → Workspace switches
 26. **New Tab Keyboard Shortcut**: Press ⌘N (macOS only) → New tab opens with placeholder text → Immediately ready for typing
-27. **Empty State UI**: Close all tabs → Center of editor shows large "新しい文書を作成" button → Click button → New tab opens
+27. **Empty State UI**: Close all tabs → Center of editor shows large "新しいメモを作成" button → Click button → New tab opens
 28. **Unified Button Colors**: New tab (+) button in tab bar matches workspace add (+) button color (blue)
 29. **Search with Line Jump**: Type "機能" in search box → Results show matched lines with "行 5" label → Click "行 5" → File opens and scrolls to line 5 with cursor positioned
 30. **Bullet List Indentation**: Type "- Item 1" → Press Enter → Type "Item 2" → Press Tab → Line indents to "  - Item 2" → Press Shift+Tab → Line outdents back to "- Item 2"
