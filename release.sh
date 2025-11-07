@@ -85,6 +85,19 @@ fi
 
 echo -e "${GREEN}Build completed successfully.${NC}\n"
 
+# DMGファイル名を変更
+echo -e "${BLUE}Renaming DMG files...${NC}"
+if [ -f "dist/memo3-${NEW_VERSION}.dmg" ]; then
+  mv "dist/memo3-${NEW_VERSION}.dmg" "dist/memo3-${NEW_VERSION}-intel-x64.dmg"
+  echo "  Renamed: memo3-${NEW_VERSION}.dmg → memo3-${NEW_VERSION}-intel-x64.dmg"
+fi
+
+if [ -f "dist/memo3-${NEW_VERSION}-arm64.dmg" ]; then
+  mv "dist/memo3-${NEW_VERSION}-arm64.dmg" "dist/memo3-${NEW_VERSION}-apple-arm64.dmg"
+  echo "  Renamed: memo3-${NEW_VERSION}-arm64.dmg → memo3-${NEW_VERSION}-apple-arm64.dmg"
+fi
+echo ""
+
 # ビルド成果物の確認
 if [ ! -d "dist" ]; then
   echo -e "${RED}dist directory not found. Exiting.${NC}"
