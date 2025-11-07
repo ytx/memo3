@@ -340,11 +340,7 @@ echo -e "${GREEN}index.html generated.${NC}\n"
 # アップロード
 echo -e "${BLUE}Uploading to lolipop3:web/xpenguin.biz/memo3/${NC}"
 
-# index.html をアップロード
-echo "Uploading index.html..."
-scp dist/index.html lolipop3:web/xpenguin.biz/memo3/
-
-# .dmg ファイルをアップロード
+# .dmg ファイルをアップロード（先にファイルをアップロード）
 if [ "$DMG_COUNT" -gt 0 ]; then
   echo "Uploading .dmg files..."
   scp dist/*.dmg lolipop3:web/xpenguin.biz/memo3/
@@ -355,6 +351,10 @@ if [ "$EXE_COUNT" -gt 0 ]; then
   echo "Uploading .exe files..."
   scp dist/*.exe lolipop3:web/xpenguin.biz/memo3/
 fi
+
+# index.html をアップロード（最後にindex.htmlを更新）
+echo "Uploading index.html..."
+scp dist/index.html lolipop3:web/xpenguin.biz/memo3/
 
 echo -e "\n${GREEN}=== Release completed successfully! ===${NC}"
 echo -e "Version: ${GREEN}${NEW_VERSION}${NC}"
