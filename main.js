@@ -730,7 +730,8 @@ function createWindow() {
       nodeIntegration: false
     },
     title: 'memo3',
-    icon: path.join(__dirname, 'icon.icns')
+    icon: path.join(__dirname, 'icon.icns'),
+    autoHideMenuBar: true  // メニューバーを自動的に非表示（Windows/Linux用）
   });
 
   mainWindow.loadFile('index.html');
@@ -837,8 +838,13 @@ function createWindow() {
     });
   }
 
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  // macOSの場合のみメニューを設定、Windows/Linuxでは完全に削除
+  if (process.platform === 'darwin') {
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+  } else {
+    Menu.setApplicationMenu(null);
+  }
 }
 
 app.whenReady().then(async () => {
@@ -1243,7 +1249,8 @@ ipcMain.handle('open-preview', async () => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
-    }
+    },
+    autoHideMenuBar: true  // メニューバーを自動的に非表示（Windows/Linux用）
   });
 
   previewWindow.loadFile('preview.html');
