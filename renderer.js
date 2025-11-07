@@ -2262,6 +2262,10 @@ async function showSettings() {
 
   // タグタブの内容をロード
   await loadTagsForSettings();
+
+  // バージョン情報を取得して表示
+  const version = await window.api.getVersion();
+  document.getElementById('about-version').textContent = version;
 }
 
 // 設定ダイアログを閉じる

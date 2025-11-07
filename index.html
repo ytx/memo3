@@ -220,28 +220,39 @@
 
         <!-- Aboutタブ -->
         <div id="settings-tab-about" class="settings-tab-pane">
-          <div class="settings-group">
-            <label>memo3について</label>
-            <div style="margin-top: 20px; line-height: 2;">
-              <div>
-                <a href="#" id="about-github-link" style="color: #007acc; text-decoration: none;">
-                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">code</span>
-                  GitHub リポジトリ
-                </a>
-              </div>
-              <div style="margin-top: 12px;">
-                <a href="#" id="about-download-link" style="color: #007acc; text-decoration: none;">
-                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">download</span>
-                  ダウンロードサイト
-                </a>
-              </div>
-              <div style="margin-top: 12px;">
-                <a href="#" id="about-coffee-link" style="color: #007acc; text-decoration: none;">
-                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">coffee</span>
-                  Buy Me A Coffee
-                </a>
-              </div>
+          <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 32px; font-weight: 600; color: var(--text-color); margin-bottom: 10px;">
+              memo3
             </div>
+            <div style="font-size: 16px; color: var(--text-secondary-color); margin-bottom: 30px;">
+              バージョン <span id="about-version">読み込み中...</span>
+            </div>
+          </div>
+
+          <div style="max-width: 400px; margin: 0 auto;">
+            <a href="#" id="about-github-link" style="display: flex; align-items: center; padding: 16px; margin-bottom: 12px; background: var(--sidebar-color); border-radius: 8px; text-decoration: none; color: var(--text-color); transition: all 0.2s;">
+              <span class="material-symbols-outlined" style="font-size: 24px; margin-right: 16px; color: #007acc;">code</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 2px;">GitHub リポジトリ</div>
+                <div style="font-size: 12px; color: var(--text-secondary-color);">ソースコードを見る</div>
+              </div>
+            </a>
+
+            <a href="#" id="about-download-link" style="display: flex; align-items: center; padding: 16px; margin-bottom: 12px; background: var(--sidebar-color); border-radius: 8px; text-decoration: none; color: var(--text-color); transition: all 0.2s;">
+              <span class="material-symbols-outlined" style="font-size: 24px; margin-right: 16px; color: #007acc;">download</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 2px;">ダウンロードサイト</div>
+                <div style="font-size: 12px; color: var(--text-secondary-color);">最新版を入手</div>
+              </div>
+            </a>
+
+            <a href="#" id="about-coffee-link" style="display: flex; align-items: center; padding: 16px; background: var(--sidebar-color); border-radius: 8px; text-decoration: none; color: var(--text-color); transition: all 0.2s;">
+              <span class="material-symbols-outlined" style="font-size: 24px; margin-right: 16px; color: #007acc;">coffee</span>
+              <div style="flex: 1;">
+                <div style="font-weight: 500; margin-bottom: 2px;">Buy Me A Coffee</div>
+                <div style="font-size: 12px; color: var(--text-secondary-color);">開発を支援する</div>
+              </div>
+            </a>
           </div>
         </div>
       </div>

@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // バージョンチェック
   checkUpdate: () => ipcRenderer.invoke('check-update'),
+  getVersion: () => ipcRenderer.invoke('get-version'),
 
   // URL and search
   openUrl: (url) => ipcRenderer.invoke('open-url', url),

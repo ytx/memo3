@@ -1598,6 +1598,11 @@ ipcMain.handle('check-update', async () => {
   }
 });
 
+// バージョン取得
+ipcMain.handle('get-version', () => {
+  return packageJson.version;
+});
+
 // セマンティックバージョン比較
 function compareVersions(v1, v2) {
   const parts1 = v1.split('.').map(Number);
