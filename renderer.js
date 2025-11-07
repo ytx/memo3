@@ -38,6 +38,7 @@ let settings = {
   theme: 'ace/theme/monokai',
   themePreset2: 'ace/theme/github',
   fontSize: 14,
+  lineHeight: 1.5,
   wordWrap: true,
   showLineNumbers: true,
   showInvisibles: false,
@@ -408,6 +409,7 @@ function initEditor(tabId, containerId) {
   editor.setTheme(currentTheme || settings.theme);
   editor.session.setMode("ace/mode/markdown");
   editor.setFontSize(settings.fontSize);
+  editor.container.style.lineHeight = settings.lineHeight;
   editor.setOption("wrap", settings.wordWrap);
   editor.renderer.setShowGutter(settings.showLineNumbers);
   editor.setShowInvisibles(settings.showInvisibles);
@@ -2250,11 +2252,11 @@ async function showSettings() {
   dialog.classList.remove('hidden');
 
   // 現在の設定を反映
-  document.getElementById('current-folder-display').value = rootFolder || '';
   document.getElementById('keybinding-select').value = settings.keybinding || '';
   document.getElementById('theme-select').value = settings.theme;
   document.getElementById('theme-preset2').value = settings.themePreset2;
   document.getElementById('font-size').value = settings.fontSize;
+  document.getElementById('line-height').value = settings.lineHeight;
   document.getElementById('word-wrap').checked = settings.wordWrap;
   document.getElementById('show-line-numbers').checked = settings.showLineNumbers;
 
@@ -2544,9 +2546,10 @@ async function saveSettings() {
   settings.theme = document.getElementById('theme-select').value;
   settings.themePreset2 = document.getElementById('theme-preset2').value;
   settings.fontSize = parseInt(document.getElementById('font-size').value);
+  settings.lineHeight = parseFloat(document.getElementById('line-height').value);
   settings.wordWrap = document.getElementById('word-wrap').checked;
   settings.showLineNumbers = document.getElementById('show-line-numbers').checked;
-  
+
   // 現在のテーマを更新
   currentTheme = settings.themeIndex === 0 ? settings.theme : settings.themePreset2;
 
@@ -2554,6 +2557,7 @@ async function saveSettings() {
   Object.values(editors).forEach(editor => {
     editor.setTheme(currentTheme);
     editor.setFontSize(settings.fontSize);
+    editor.container.style.lineHeight = settings.lineHeight;
     editor.setOption("wrap", settings.wordWrap);
     editor.renderer.setShowGutter(settings.showLineNumbers);
     editor.setShowInvisibles(settings.showInvisibles);
@@ -2663,6 +2667,29 @@ function updateEmptyState() {
   }
 }
 
+// バージョンチェック
+async function checkForUpdates() {
+  try {
+    const result = await window.api.checkUpdate();
+    if (result.hasUpdate) {
+      // 更新アイコンを表示
+      const updateBtn = document.getElementById('update-btn');
+      updateBtn.style.display = 'block';
+      console.log(`新しいバージョンが利用可能です: ${result.latestVersion} (現在: ${result.currentVersion})`);
+    }
+  } catch (error) {
+    console.error('バージョンチェックに失敗しました:', error);
+  }
+}
+
+function startVersionCheck() {
+  // 起動時にチェック
+  checkForUpdates();
+
+  // 24時間ごとにチェック
+  setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
+}
+
 // 初期化
 async function init() {
   // 設定の読み込み
@@ -2676,6 +2703,11 @@ async function init() {
   // themeIndexを初期化（既存設定に無い場合）
   if (settings.themeIndex === undefined) {
     settings.themeIndex = 0;
+  }
+
+  // lineHeightを初期化（既存設定に無い場合）
+  if (!settings.lineHeight) {
+    settings.lineHeight = 1.5;
   }
 
   // 現在のテーマを設定
@@ -2711,6 +2743,9 @@ async function init() {
 
   // 空状態を更新
   updateEmptyState();
+
+  // バージョンチェックを開始
+  startVersionCheck();
 }
 
 // イベントリスナーの設定
@@ -2743,6 +2778,9 @@ document.addEventListener('DOMContentLoaded', () => {
   tabList.addEventListener('scroll', updateScrollButtons);
 
   document.getElementById('settings-btn').addEventListener('click', showSettings);
+  document.getElementById('update-btn').addEventListener('click', () => {
+    window.api.openUrl('https://xpenguin.biz/memo3/');
+  });
   document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
   document.getElementById('cancel-settings-btn').addEventListener('click', hideSettings);
 
@@ -2773,19 +2811,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // フォルダ選択ボタン
-  document.getElementById('folder-select-btn').addEventListener('click', async () => {
-    const result = await window.api.selectFolder();
-    if (result.success) {
-      rootFolder = result.folderPath;
-      document.getElementById('current-folder-display').value = rootFolder;
-      updateRootFolderPath();
-      files = await window.api.getFiles();
-      displayFiles();
-      showStatus('フォルダを選択しました');
-    }
+  // Aboutタブのリンク
+  document.getElementById('about-github-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.api.openUrl('https://github.com/ytx/memo3');
   });
-  
+
+  document.getElementById('about-download-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.api.openUrl('https://xpenguin.biz/memo3/');
+  });
+
+  document.getElementById('about-coffee-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.api.openUrl('https://buymeacoffee.com/xpenguin');
+  });
+
   // 検索ボックス
   document.getElementById('search-input').addEventListener('input', searchFiles);
   document.getElementById('clear-search-btn').addEventListener('click', clearSearch);

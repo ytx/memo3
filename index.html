@@ -85,6 +85,9 @@
           <button id="settings-btn" class="btn-icon btn-flat" title="設定">
             <span class="material-symbols-outlined">settings</span>
           </button>
+          <button id="update-btn" class="btn-icon btn-flat" title="新しいバージョンが利用可能です" style="display: none;">
+            <span class="material-symbols-outlined" style="color: #ff4444;">browser_updated</span>
+          </button>
         </div>
       </div>
       
@@ -126,26 +129,15 @@
 
       <!-- タブナビゲーション -->
       <div class="settings-tabs">
-        <button class="settings-tab active" data-tab="general">全般</button>
-        <button class="settings-tab" data-tab="editor">エディタ</button>
+        <button class="settings-tab active" data-tab="editor">エディタ</button>
         <button class="settings-tab" data-tab="tags">タグ</button>
+        <button class="settings-tab" data-tab="about">About</button>
       </div>
 
       <!-- タブコンテンツ -->
       <div class="settings-tab-content">
-        <!-- 全般タブ -->
-        <div id="settings-tab-general" class="settings-tab-pane active">
-          <div class="settings-group">
-            <label for="current-folder-display">作業フォルダ:</label>
-            <input type="text" id="current-folder-display" readonly placeholder="フォルダが選択されていません">
-            <div style="text-align: right; margin-top: 8px;">
-              <button type="button" id="folder-select-btn" class="btn-secondary">選択</button>
-            </div>
-          </div>
-        </div>
-
         <!-- エディタタブ -->
-        <div id="settings-tab-editor" class="settings-tab-pane">
+        <div id="settings-tab-editor" class="settings-tab-pane active">
           <div class="settings-group">
             <label for="keybinding-select">キーバインド:</label>
             <select id="keybinding-select">
@@ -189,6 +181,11 @@
           </div>
 
           <div class="settings-group">
+            <label for="line-height">行間:</label>
+            <input type="number" id="line-height" min="1.0" max="2.5" step="0.1" value="1.5">
+          </div>
+
+          <div class="settings-group">
             <label>
               <input type="checkbox" id="word-wrap">
               折り返し表示
@@ -217,6 +214,33 @@
             <label>タグ一覧:</label>
             <div id="settings-tag-list" class="settings-tag-list">
               <!-- タグリストが表示される -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Aboutタブ -->
+        <div id="settings-tab-about" class="settings-tab-pane">
+          <div class="settings-group">
+            <label>memo3について</label>
+            <div style="margin-top: 20px; line-height: 2;">
+              <div>
+                <a href="#" id="about-github-link" style="color: #007acc; text-decoration: none;">
+                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">code</span>
+                  GitHub リポジトリ
+                </a>
+              </div>
+              <div style="margin-top: 12px;">
+                <a href="#" id="about-download-link" style="color: #007acc; text-decoration: none;">
+                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">download</span>
+                  ダウンロードサイト
+                </a>
+              </div>
+              <div style="margin-top: 12px;">
+                <a href="#" id="about-coffee-link" style="color: #007acc; text-decoration: none;">
+                  <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;">coffee</span>
+                  Buy Me A Coffee
+                </a>
+              </div>
             </div>
           </div>
         </div>

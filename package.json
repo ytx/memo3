@@ -1,7 +1,7 @@
 {
   "name": "memo3",
   "productName": "memo3",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A simple memo application",
   "main": "main.js",
   "scripts": {

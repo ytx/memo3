@@ -37,7 +37,10 @@ contextBridge.exposeInMainWorld('api', {
   
   // 開発者ツール
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
-  
+
+  // バージョンチェック
+  checkUpdate: () => ipcRenderer.invoke('check-update'),
+
   // URL and search
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
   searchGoogle: (searchText) => ipcRenderer.invoke('search-google', searchText),

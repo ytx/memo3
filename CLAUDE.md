@@ -36,7 +36,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - Data is stored in:
   - User-selected root folder - All .md/.txt files (sorted by modification time, descending)
   - `workspace.json` - Multi-workspace configuration (version 2.0 format: workspaces list, active workspace)
-  - `settings.json` - Editor configuration (keybindings, themes, font size, whitespace display)
+  - `settings.json` - Editor configuration (keybindings, themes, font size, line height, whitespace display)
   - `sessions.json` - Per-workspace session states (open tabs, active tab per workspace)
   - `tags.json` - Tag definitions and file associations (event-sourced log format for multi-PC sync)
 
@@ -58,7 +58,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Per-Workspace Session Restoration**: Each workspace maintains its own session (open tabs, active tab, editor states)
 - **Tag Management**: Organize files with color-coded tags, filter by tags, search tags, multi-PC sync support
 - **Enhanced Search**: Search both filenames and file content with detailed results display, combinable with tag filters
-- **Editor Controls**: Font size adjustment, whitespace character display, theme toggle, markdown preview, developer tools access
+- **Editor Controls**: Font size adjustment, line height adjustment (1.0-2.5), whitespace character display, theme toggle, markdown preview, developer tools access
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
 - **Smart New File Creation**: + button creates files when 2+ non-empty lines exist, auto-generates filenames from content
@@ -69,9 +69,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 - **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
+- **Automatic Version Check**: Checks for updates on startup and every 24 hours, displays red update icon when new version available
 - **Material Symbols Icons**: Uses Material Symbols for consistent, scalable iconography throughout the UI
   - File icons: `draft` (untagged with default color), `docs` (tagged with first tag's color)
-  - UI controls: `folder`, `search`, `preview`, `routine`, `space_bar`, `text_decrease`, `text_increase`, `settings`, `sell`
+  - UI controls: `folder`, `search`, `preview`, `routine`, `space_bar`, `text_decrease`, `text_increase`, `settings`, `browser_updated`, `sell`
   - All icons use `var(--text-color)` for theme-consistent coloring (except file icons with tag colors)
 
 ### IPC Communication Channels
@@ -87,6 +88,9 @@ This is an Electron-based memo application with ACE editor integration for markd
 
 **Developer Tools**
 - `open-dev-tools` - Open developer tools in detached window
+
+**Version Check**
+- `check-update` - Check for new version on https://xpenguin.biz/memo3/, returns hasUpdate, currentVersion, latestVersion
 
 **Settings & Session Management**
 - `get-settings`, `save-settings` - Editor settings management (includes theme presets, with real-time persistence)
@@ -320,6 +324,10 @@ This is an Electron-based memo application with ACE editor integration for markd
 42. **Table Cell Line Breaks**: In table editor → Click cell → Type "Line 1" → Press Enter → Type "Line 2" → Save → Markdown shows `Line 1<br>Line 2` → Preview displays as two lines
 43. **Table Alignment**: In table editor → Click column header → Click center alignment (■) button → All cells in column get center alignment → Save → Markdown separator shows `:---:` → Preview displays centered text
 44. **Tab Navigation with Keyboard**: Open 3 files in tabs → Press Ctrl+Tab → Switches to next tab → Press Ctrl+Tab again → Switches to third tab → Press Ctrl+Tab once more → Returns to first tab (circular) → Press Ctrl+Shift+Tab → Goes back to third tab
+45. **Line Height Adjustment**: Settings → Editor tab → Change line height from 1.5 to 2.0 → Save → All editor text now has wider spacing between lines
+46. **About Tab**: Settings → About tab → Click "GitHub リポジトリ" → Opens https://github.com/ytx/memo3 in browser → Click "ダウンロードサイト" → Opens download page → Click "Buy Me A Coffee" → Opens donation page
+47. **Version Check on Startup**: Launch memo3 → App checks https://xpenguin.biz/memo3/ for new version → If newer version exists (e.g., 1.0.4 > 1.0.3) → Red update icon appears next to settings button → Click icon → Opens download page in browser
+48. **Periodic Version Check**: App running for 24 hours → Automatic version check runs → If update available → Red update icon appears
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

@@ -4,6 +4,8 @@ const fs = require('fs').promises;
 const chokidar = require('chokidar');
 const os = require('os');
 const crypto = require('crypto');
+const https = require('https');
+const packageJson = require('./package.json');
 
 // アプリケーション名を最初に設定
 app.setName('memo3');
@@ -1556,3 +1558,54 @@ ipcMain.handle('open-dev-tools', () => {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 });
+
+// バージョンチェック
+ipcMain.handle('check-update', async () => {
+  try {
+    const currentVersion = packageJson.version;
+
+    // HTTPSでページを取得
+    const html = await new Promise((resolve, reject) => {
+      https.get('https://xpenguin.biz/memo3/', (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => { resolve(data); });
+      }).on('error', reject);
+    });
+
+    // <div class="version">Version X.X.X</div> からバージョンを抽出
+    const versionMatch = html.match(/<div class="version">Version\s+([\d.]+)<\/div>/i);
+    if (!versionMatch) {
+      console.log('Could not find version on website');
+      return { hasUpdate: false };
+    }
+
+    const latestVersion = versionMatch[1];
+
+    // セマンティックバージョンで比較
+    const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+
+    console.log(`Current: ${currentVersion}, Latest: ${latestVersion}, Has update: ${isNewer}`);
+
+    return {
+      hasUpdate: isNewer,
+      currentVersion,
+      latestVersion
+    };
+  } catch (error) {
+    console.error('Failed to check for updates:', error);
+    return { hasUpdate: false, error: error.message };
+  }
+});
+
+// セマンティックバージョン比較
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < 3; i++) {
+    if (parts1[i] > parts2[i]) return 1;
+    if (parts1[i] < parts2[i]) return -1;
+  }
+  return 0;
+}
