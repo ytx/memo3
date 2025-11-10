@@ -37,7 +37,7 @@ This is an Electron-based memo application with ACE editor integration for markd
   - User-selected root folder - All .md/.txt files (sorted by modification time, descending)
   - `workspace.json` - Multi-workspace configuration (version 2.0 format: workspaces list, active workspace)
   - `settings.json` - Editor configuration (keybindings, themes, font size, line height, whitespace display)
-  - `sessions.json` - Per-workspace session states (open tabs, active tab per workspace)
+  - `sessions.json` - Per-workspace session states (open tabs, active tab, search presets, active preset per workspace)
   - `tags.json` - Tag definitions and file associations (event-sourced log format for multi-PC sync)
 
 **Renderer Process**
@@ -58,6 +58,7 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Per-Workspace Session Restoration**: Each workspace maintains its own session (open tabs, active tab, editor states)
 - **Tag Management**: Organize files with color-coded tags, filter by tags, search tags, multi-PC sync support
 - **Enhanced Search**: Search both filenames and file content with detailed results display, combinable with tag filters
+- **Preset Search**: Save up to 4 search conditions (search text + tag filters) as presets, quick access buttons at sidebar bottom, per-workspace storage
 - **Editor Controls**: Font size adjustment, line height adjustment (1.0-2.5), whitespace character display, theme toggle, markdown preview, developer tools access
 - **Theme Toggle**: Quick switching between two user-configured themes via 🎨 button
 - **Auto-Save**: Automatic save 5 seconds after editing, prevents saving unchanged files
@@ -176,6 +177,22 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Search Integration**: Text search and tag filters work together seamlessly
 - **Session Persistence**: Tag filter states saved per workspace session
 - **Simplified Dialog**: Tag assignment dialog shows only search box, tag list, and close button for streamlined UX
+
+**Preset Search System**
+- **4 Preset Slots**: Save up to 4 search conditions per workspace at sidebar bottom (below file list)
+- **Search Condition Storage**: Each preset stores search text and tag filter states
+- **Per-Workspace Presets**: Independent preset configurations for each workspace, stored in sessions.json
+- **Preset Creation**: Left-click empty (+) button → Opens editor with current search conditions → Set title (1-4 chars, emoji supported) and color → Save
+- **Preset Application**: Left-click preset button → Applies search text and tag filters → Updates tag filter button state
+- **Preset Editing**: Right-click preset button → Opens editor with existing settings → Modify and save or delete
+- **Preset Deletion**: Right-click preset → Select "削除" → Confirmation → Preset removed
+- **Active State Display**: Applied preset shows thick border (3px), auto-clears when search conditions manually changed
+- **Color Customization**: Choose from 16-color palette (same colors as tags)
+- **Clear All Button**: × button clears search text, resets all tag filters, and deactivates preset
+- **Button Layout**: 4 preset buttons + clear button in horizontal row, fixed at sidebar bottom
+- **Visual Feedback**: Empty presets show + with transparent background, set presets show title with custom color
+- **Instant Application**: Clicking preset immediately updates search results and file list
+- **Session Persistence**: Presets saved when "保存" or "削除" button pressed in editor dialog
 
 **Multiple Workspace Management**
 - **Workspace Selector UI**: Dropdown in sidebar showing current workspace name with add button
@@ -323,11 +340,15 @@ This is an Electron-based memo application with ACE editor integration for markd
 41. **Edit Existing Table**: Position cursor on table row → Right-click → "表を編集" → Modal opens with table data → Add row above/below → Delete column → Edit cells → Change alignment → Save → Table updated in place
 42. **Table Cell Line Breaks**: In table editor → Click cell → Type "Line 1" → Press Enter → Type "Line 2" → Save → Markdown shows `Line 1<br>Line 2` → Preview displays as two lines
 43. **Table Alignment**: In table editor → Click column header → Click center alignment (■) button → All cells in column get center alignment → Save → Markdown separator shows `:---:` → Preview displays centered text
-44. **Tab Navigation with Keyboard**: Open 3 files in tabs → Press Ctrl+Tab → Switches to next tab → Press Ctrl+Tab again → Switches to third tab → Press Ctrl+Tab once more → Returns to first tab (circular) → Press Ctrl+Shift+Tab → Goes back to third tab
-45. **Line Height Adjustment**: Settings → Editor tab → Change line height from 1.5 to 2.0 → Save → All editor text now has wider spacing between lines
-46. **About Tab**: Settings → About tab → Click "GitHub リポジトリ" → Opens https://github.com/ytx/memo3 in browser → Click "ダウンロードサイト" → Opens download page → Click "Buy Me A Coffee" → Opens donation page
-47. **Version Check on Startup**: Launch memo3 → App checks https://xpenguin.biz/memo3/ for new version → If newer version exists (e.g., 1.0.4 > 1.0.3) → Red update icon appears next to settings button → Click icon → Opens download page in browser
-48. **Periodic Version Check**: App running for 24 hours → Automatic version check runs → If update available → Red update icon appears
+44. **Create Search Preset**: Set search text "TODO" and tag filter "優先度高" to show → Click empty preset button (+) → Dialog opens with conditions pre-filled → Type title "📝" → Select green color → Click "保存" → Preset button shows 📝 with green background
+45. **Apply Search Preset**: Click 📝 preset button → Search text and tag filter instantly applied → Tag filter button turns blue (active) → File list updates → Preset button shows thick border (active state)
+46. **Edit Search Preset**: Right-click 📝 preset → Dialog opens with current settings → Change title to "TODO" → Change color to red → Click "保存" → Preset button updates to show TODO in red
+47. **Clear All Search**: After applying preset → Click × clear button → Search text cleared → All tag filters reset → Tag filter button returns to normal → Preset active state cleared → All files shown
+48. **Tab Navigation with Keyboard**: Open 3 files in tabs → Press Ctrl+Tab → Switches to next tab → Press Ctrl+Tab again → Switches to third tab → Press Ctrl+Tab once more → Returns to first tab (circular) → Press Ctrl+Shift+Tab → Goes back to third tab
+49. **Line Height Adjustment**: Settings → Editor tab → Change line height from 1.5 to 2.0 → Save → All editor text now has wider spacing between lines
+50. **About Tab**: Settings → About tab → Click "GitHub リポジトリ" → Opens https://github.com/ytx/memo3 in browser → Click "ダウンロードサイト" → Opens download page → Click "Buy Me A Coffee" → Opens donation page
+51. **Version Check on Startup**: Launch memo3 → App checks https://xpenguin.biz/memo3/ for new version → If newer version exists (e.g., 1.0.4 > 1.0.3) → Red update icon appears next to settings button → Click icon → Opens download page in browser
+52. **Periodic Version Check**: App running for 24 hours → Automatic version check runs → If update available → Red update icon appears
 
 **Process Management**
 - **Cross-Platform Exit**: App terminates completely on window close (Windows, macOS, Linux)

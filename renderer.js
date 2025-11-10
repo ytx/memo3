@@ -14,6 +14,12 @@ let fileTags = []; // ファイルとタグの関連リスト
 let tagFilterStatus = {}; // タグフィルターの状態 { tagId: 'show' | 'hide' | 'none' }
 let isTagFilterVisible = false; // タグフィルターの表示状態
 
+// プリセット検索管理
+let searchPresets = [null, null, null, null]; // 4つのプリセット
+let activePresetIndex = -1; // アクティブなプリセット（-1 = なし）
+let editingPresetIndex = -1; // 編集中のプリセット
+let editingPresetData = null; // 編集中のプリセットデータ
+
 // タグカラーパレット（16色）
 const TAG_COLOR_PALETTE = [
   '#e53935', // 赤
@@ -338,9 +344,11 @@ class TabManager {
         filePath: tab.file ? tab.file.path : null,
         isModified: tab.isModified
       })),
-      activeTabId: this.activeTabId
+      activeTabId: this.activeTabId,
+      searchPresets: searchPresets,
+      activePresetIndex: activePresetIndex
     };
-    
+
     try {
       await window.api.saveSession(session);
     } catch (error) {
@@ -390,6 +398,19 @@ class TabManager {
           // 元のアクティブタブが存在しない場合は最初のタブをアクティブに
           this.switchToTab(restoredTabs[0].tabId);
         }
+      }
+
+      // プリセット検索を復元
+      if (session.searchPresets) {
+        searchPresets = session.searchPresets;
+      }
+      if (session.activePresetIndex !== undefined) {
+        activePresetIndex = session.activePresetIndex;
+      }
+
+      // プリセットボタンの表示を更新
+      if (typeof updatePresetButtons === 'function') {
+        updatePresetButtons();
       }
 
     } catch (error) {
@@ -1275,7 +1296,18 @@ async function searchFiles() {
   const searchQuery = document.getElementById('search-input').value.trim();
   const searchResults = document.getElementById('search-results');
   const fileList = document.getElementById('file-list');
-  
+
+  // 手動で検索条件が変更された場合、アクティブプリセットをクリア
+  if (activePresetIndex >= 0) {
+    const preset = searchPresets[activePresetIndex];
+    if (preset && preset.searchText !== searchQuery) {
+      activePresetIndex = -1;
+      if (typeof updatePresetButtons === 'function') {
+        updatePresetButtons();
+      }
+    }
+  }
+
   if (!searchQuery) {
     // 検索クエリが空の場合は検索結果を非表示にしてファイルリストを表示
     searchResults.style.display = 'none';
@@ -2750,6 +2782,9 @@ async function init() {
 
   // バージョンチェックを開始
   startVersionCheck();
+
+  // プリセット検索を初期化
+  initPresets();
 }
 
 // イベントリスナーの設定
@@ -3521,11 +3556,19 @@ function cycleTagStatus(tagId) {
     tagFilterStatus[tagId] = 'none';
   }
 
+  // 手動でタグフィルターが変更された場合、アクティブプリセットをクリア
+  if (activePresetIndex >= 0) {
+    activePresetIndex = -1;
+    if (typeof updatePresetButtons === 'function') {
+      updatePresetButtons();
+    }
+  }
+
   renderTagList();
   updateTagFilterButton();
   applyTagFilter();
 
-  // セッションに保存
+  // セッション保存
   saveTagFilterToSession();
 }
 
@@ -4470,5 +4513,338 @@ function closeTableEditor() {
     selectedRow: -1,
     selectedCol: -1
   };
+}
+
+// ============================================
+// プリセット検索機能
+// ============================================
+
+// プリセット用カラーパレット（タグと同じ16色）
+const PRESET_COLOR_PALETTE = [
+  '#e53935', '#d81b60', '#8e24aa', '#5e35b1',
+  '#3949ab', '#1e88e5', '#039be5', '#00acc1',
+  '#00897b', '#43a047', '#7cb342', '#c0ca33',
+  '#fdd835', '#ffb300', '#fb8c00', '#6d4c41'
+];
+
+// プリセット検索を初期化
+function initPresets() {
+  // プリセットボタンのイベントリスナーを設定
+  const presetButtons = document.querySelectorAll('.preset-btn');
+  presetButtons.forEach((btn, index) => {
+    // 左クリック
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const preset = searchPresets[index];
+
+      if (!preset) {
+        // 未設定の場合：現在の検索条件を保存して編集ダイアログを開く
+        const currentCondition = getCurrentSearchCondition();
+        openPresetDialog(index, currentCondition);
+      } else {
+        // 設定済みの場合：プリセットを適用
+        applyPreset(index);
+      }
+    });
+
+    // 右クリック
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const preset = searchPresets[index] || null;
+      openPresetDialog(index, preset);
+    });
+  });
+
+  // 検索条件クリアボタン
+  document.getElementById('clear-all-search-btn').addEventListener('click', () => {
+    clearAllSearch();
+  });
+
+  // プリセット編集ダイアログのイベントリスナー
+  setupPresetDialogListeners();
+
+  // 初期表示を更新
+  updatePresetButtons();
+}
+
+// プリセットボタンの表示を更新
+function updatePresetButtons() {
+  const presetButtons = document.querySelectorAll('.preset-btn');
+
+  presetButtons.forEach((btn, index) => {
+    const preset = searchPresets[index];
+
+    if (!preset) {
+      // 未設定
+      btn.textContent = '+';
+      btn.classList.add('preset-empty');
+      btn.classList.remove('preset-active');
+      btn.style.backgroundColor = '';
+      btn.style.color = '';
+    } else {
+      // 設定済み
+      btn.textContent = preset.title;
+      btn.classList.remove('preset-empty');
+      btn.style.backgroundColor = preset.color;
+      btn.style.color = '#ffffff';
+
+      // アクティブ状態の更新
+      if (activePresetIndex === index) {
+        btn.classList.add('preset-active');
+      } else {
+        btn.classList.remove('preset-active');
+      }
+    }
+  });
+}
+
+// 現在の検索条件を取得
+function getCurrentSearchCondition() {
+  const searchText = document.getElementById('search-input').value;
+  const tagFilters = {};
+
+  // タグフィルター状態をコピー
+  Object.keys(tagFilterStatus).forEach(tagId => {
+    tagFilters[tagId] = tagFilterStatus[tagId];
+  });
+
+  return {
+    searchText: searchText,
+    tagFilters: tagFilters
+  };
+}
+
+// プリセットを適用
+function applyPreset(index) {
+  const preset = searchPresets[index];
+  if (!preset) return;
+
+  // 検索文字列を設定
+  document.getElementById('search-input').value = preset.searchText;
+
+  // タグフィルターを設定
+  tagFilterStatus = { ...preset.tagFilters };
+
+  // アクティブプリセットを設定
+  activePresetIndex = index;
+  updatePresetButtons();
+
+  // タグフィルターUIを更新
+  renderTagList();
+  updateTagFilterButton();
+
+  // ファイルリスト更新（検索文字列があれば検索、なければ表示）
+  if (preset.searchText) {
+    searchFiles();
+  } else {
+    const searchResults = document.getElementById('search-results');
+    const fileList = document.getElementById('file-list');
+    searchResults.style.display = 'none';
+    fileList.style.display = 'block';
+    displayFiles();
+  }
+}
+
+// プリセット編集ダイアログを開く
+function openPresetDialog(index, presetOrCondition) {
+  editingPresetIndex = index;
+
+  const dialog = document.getElementById('preset-dialog');
+  const titleInput = document.getElementById('preset-title');
+  const colorPalette = document.getElementById('preset-color-palette');
+  const searchTextSpan = document.getElementById('preset-search-text');
+  const tagsSpan = document.getElementById('preset-tags');
+  const deleteBtn = document.getElementById('preset-delete-btn');
+
+  // 既存のプリセットか、現在の検索条件か判定
+  const isExistingPreset = presetOrCondition && presetOrCondition.title;
+
+  if (isExistingPreset) {
+    // 既存プリセットを編集
+    editingPresetData = { ...presetOrCondition };
+    titleInput.value = presetOrCondition.title;
+    deleteBtn.style.display = 'inline-block';
+  } else {
+    // 新規作成（現在の検索条件を使用）
+    editingPresetData = {
+      title: '',
+      color: PRESET_COLOR_PALETTE[Math.floor(Math.random() * PRESET_COLOR_PALETTE.length)],
+      searchText: presetOrCondition ? presetOrCondition.searchText : '',
+      tagFilters: presetOrCondition ? { ...presetOrCondition.tagFilters } : {}
+    };
+    titleInput.value = '';
+    deleteBtn.style.display = 'none';
+  }
+
+  // カラーパレットを作成
+  colorPalette.innerHTML = '';
+  PRESET_COLOR_PALETTE.forEach(color => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-color-btn';
+    btn.style.backgroundColor = color;
+    btn.dataset.color = color;
+
+    if (editingPresetData.color === color) {
+      btn.classList.add('selected');
+    }
+
+    btn.addEventListener('click', () => {
+      // 全ての選択を解除
+      colorPalette.querySelectorAll('.preset-color-btn').forEach(b => b.classList.remove('selected'));
+      // 選択状態にする
+      btn.classList.add('selected');
+      editingPresetData.color = color;
+    });
+
+    colorPalette.appendChild(btn);
+  });
+
+  // 検索条件表示を更新
+  updatePresetConditionDisplay();
+
+  // ダイアログを表示
+  dialog.classList.remove('hidden');
+}
+
+// プリセット条件表示を更新
+function updatePresetConditionDisplay() {
+  const searchTextSpan = document.getElementById('preset-search-text');
+  const tagsSpan = document.getElementById('preset-tags');
+
+  // 検索文字列
+  searchTextSpan.textContent = editingPresetData.searchText || '(なし)';
+
+  // タグフィルター
+  const tagNames = [];
+  Object.keys(editingPresetData.tagFilters || {}).forEach(tagId => {
+    const state = editingPresetData.tagFilters[tagId];
+    if (state !== 'none') {
+      const tag = tags.find(t => t.id === tagId);
+      if (tag) {
+        const stateText = state === 'show' ? '表示' : '非表示';
+        tagNames.push(`${tag.name}(${stateText})`);
+      }
+    }
+  });
+
+  tagsSpan.textContent = tagNames.length > 0 ? tagNames.join(', ') : '(なし)';
+}
+
+// プリセット編集ダイアログのイベントリスナーを設定
+function setupPresetDialogListeners() {
+  // 現在の検索条件を割り当てるボタン
+  document.getElementById('assign-current-condition-btn').addEventListener('click', () => {
+    const currentCondition = getCurrentSearchCondition();
+    editingPresetData.searchText = currentCondition.searchText;
+    editingPresetData.tagFilters = { ...currentCondition.tagFilters };
+    updatePresetConditionDisplay();
+  });
+
+  // 保存ボタン
+  document.getElementById('preset-save-btn').addEventListener('click', () => {
+    savePreset();
+  });
+
+  // 削除ボタン
+  document.getElementById('preset-delete-btn').addEventListener('click', () => {
+    deletePreset();
+  });
+
+  // キャンセルボタン
+  document.getElementById('preset-cancel-btn').addEventListener('click', () => {
+    closePresetDialog();
+  });
+}
+
+// プリセットを保存
+function savePreset() {
+  const titleInput = document.getElementById('preset-title');
+  const title = titleInput.value.trim();
+
+  if (!title) {
+    alert('タイトルを入力してください（1-4文字）');
+    return;
+  }
+
+  if (title.length > 4) {
+    alert('タイトルは4文字以内で入力してください');
+    return;
+  }
+
+  // プリセットを更新
+  searchPresets[editingPresetIndex] = {
+    title: title,
+    color: editingPresetData.color,
+    searchText: editingPresetData.searchText,
+    tagFilters: { ...editingPresetData.tagFilters }
+  };
+
+  // プリセットボタンの表示を更新
+  updatePresetButtons();
+
+  // ダイアログを閉じる
+  closePresetDialog();
+
+  // セッション保存
+  tabManager.saveSession();
+}
+
+// プリセットを削除
+function deletePreset() {
+  if (!confirm('このプリセットを削除しますか？')) {
+    return;
+  }
+
+  // プリセットを削除
+  searchPresets[editingPresetIndex] = null;
+
+  // アクティブプリセットをクリア
+  if (activePresetIndex === editingPresetIndex) {
+    activePresetIndex = -1;
+  }
+
+  // ボタン表示を更新
+  updatePresetButtons();
+
+  // ダイアログを閉じる
+  closePresetDialog();
+
+  // セッション保存
+  tabManager.saveSession();
+}
+
+// プリセットダイアログを閉じる
+function closePresetDialog() {
+  const dialog = document.getElementById('preset-dialog');
+  dialog.classList.add('hidden');
+  editingPresetIndex = -1;
+  editingPresetData = null;
+}
+
+// 全検索条件をクリア
+function clearAllSearch() {
+  // 検索文字列をクリア
+  document.getElementById('search-input').value = '';
+
+  // 全タグフィルターをnoneにリセット
+  Object.keys(tagFilterStatus).forEach(tagId => {
+    tagFilterStatus[tagId] = 'none';
+  });
+
+  // アクティブプリセットをクリア
+  activePresetIndex = -1;
+  updatePresetButtons();
+
+  // タグフィルターUIを更新
+  renderTagList();
+  updateTagFilterButton();
+
+  // ファイルリスト更新
+  const searchResults = document.getElementById('search-results');
+  const fileList = document.getElementById('file-list');
+  searchResults.style.display = 'none';
+  fileList.style.display = 'block';
+  displayFiles();
 }
 

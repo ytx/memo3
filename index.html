@@ -51,8 +51,17 @@
       <div class="file-list" id="file-list">
         <!-- ファイルリストがここに動的に追加される -->
       </div>
+
+      <!-- プリセット検索ボタン -->
+      <div class="search-presets">
+        <button class="preset-btn preset-empty" data-preset-index="0">+</button>
+        <button class="preset-btn preset-empty" data-preset-index="1">+</button>
+        <button class="preset-btn preset-empty" data-preset-index="2">+</button>
+        <button class="preset-btn preset-empty" data-preset-index="3">+</button>
+        <button id="clear-all-search-btn" class="preset-clear-btn" title="検索条件をクリア">×</button>
+      </div>
     </div>
-    
+
     <!-- エディタエリア -->
     <div class="editor-container">
       <div class="editor-header">
@@ -280,6 +289,42 @@
 
       <div class="dialog-actions">
         <button id="tag-dialog-close-btn" class="btn-primary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- プリセット編集ダイアログ -->
+  <div id="preset-dialog" class="dialog hidden">
+    <div class="dialog-content preset-dialog-content">
+      <h3>プリセット編集</h3>
+
+      <div class="dialog-field">
+        <label for="preset-title">タイトル (1-4文字):</label>
+        <input type="text" id="preset-title" maxlength="4" placeholder="例: 📝、TODO">
+      </div>
+
+      <div class="dialog-field">
+        <label>ボタンの色:</label>
+        <div class="preset-color-palette" id="preset-color-palette">
+          <!-- 16色のカラーボタンが動的に追加される -->
+        </div>
+      </div>
+
+      <div class="dialog-field">
+        <label>検索条件:</label>
+        <div class="preset-condition-display">
+          <div><strong>検索文字列:</strong> <span id="preset-search-text">(なし)</span></div>
+          <div><strong>タグ:</strong> <span id="preset-tags">(なし)</span></div>
+        </div>
+        <button id="assign-current-condition-btn" class="btn-secondary" style="margin-top: 8px; width: 100%;">
+          現在の検索条件を割り当てる
+        </button>
+      </div>
+
+      <div class="dialog-actions">
+        <button id="preset-save-btn" class="btn-primary">保存</button>
+        <button id="preset-delete-btn" class="btn-danger">削除</button>
+        <button id="preset-cancel-btn" class="btn-secondary">キャンセル</button>
       </div>
     </div>
   </div>
