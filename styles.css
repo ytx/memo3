@@ -1225,6 +1225,10 @@ body {
   flex: 1;
 }
 
+#selection-count.hidden {
+  display: none;
+}
+
 /* ダイアログ */
 .dialog {
   position: fixed;

@@ -67,7 +67,9 @@ This is an Electron-based memo application with ACE editor integration for markd
 - **Context Menus**: Right-click files for rename/delete/tag management, right-click status bar for developer tools, right-click in editor for table operations
 - **Markdown Table Editor**: WYSIWYG table editing with modal dialog, supports cell line breaks, column alignment, and full table operations
 - **ACE Editor Integration**: Customizable keybindings, themes with app-wide theme matching
-- **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs
+- **Tab Management**: Drag-and-drop reordering, smart closing, editor focus on new tab creation, scroll buttons for many tabs, right-click tab for "これ以外のタブを閉じる" / "すべてのタブを閉じる"
+- **Selection Stats**: Status bar shows "選択: N行 / M文字" while text is selected (hidden when selection is empty)
+- **Bullet List Folding**: Custom ACE fold mode (extends markdown fold mode) makes list items with indented children foldable from the gutter; editor context menu offers "折りたたみ/展開", "すべて折りたたむ", "すべて展開"
 - **Real-time Updates**: File changes detected automatically, file list order updates on modification
 - **External Change Handling**: Auto-reload files modified by external editors, preserves cursor and scroll position
 - **Automatic Version Check**: Checks for updates on startup and every 24 hours, displays red update icon when new version available

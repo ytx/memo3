@@ -206,6 +206,7 @@ class TabManager {
 
     updateCurrentFilePath();
     updateFileStatus();
+    updateSelectionCount();
     this.renderTabs();
   }
 
@@ -422,6 +423,63 @@ class TabManager {
 
 const tabManager = new TabManager();
 
+// 箇条書き対応の折りたたみルール（見出し・コードブロックは標準Markdownルールを継承）
+const BULLET_LINE_PATTERN = /^(\s*)([-*+]|\d+\.)\s/;
+let bulletFoldMode = null;
+
+function getBulletFoldMode() {
+  if (bulletFoldMode) return bulletFoldMode;
+
+  const oop = ace.require('ace/lib/oop');
+  const Range = ace.require('ace/range').Range;
+  const MarkdownFoldMode = ace.require('ace/mode/folding/markdown').FoldMode;
+
+  const BulletFoldMode = function() {};
+  oop.inherits(BulletFoldMode, MarkdownFoldMode);
+
+  (function() {
+    const indentOf = (line) => line.match(/^\s*/)[0].length;
+
+    // 箇条書き行の子要素の最終行を返す（子がなければ -1）
+    this.getBulletChildrenEnd = function(session, row) {
+      const line = session.getLine(row);
+      const match = line.match(BULLET_LINE_PATTERN);
+      if (!match) return -1;
+
+      const baseIndent = match[1].length;
+      const maxRow = session.getLength();
+      let endRow = -1;
+
+      for (let r = row + 1; r < maxRow; r++) {
+        const next = session.getLine(r);
+        if (/^\s*$/.test(next)) continue; // 空行は保留
+        if (indentOf(next) <= baseIndent) break;
+        endRow = r;
+      }
+      return endRow;
+    };
+
+    this.getFoldWidget = function(session, foldStyle, row) {
+      const base = MarkdownFoldMode.prototype.getFoldWidget.call(this, session, foldStyle, row);
+      if (base) return base;
+      return this.getBulletChildrenEnd(session, row) > row ? 'start' : '';
+    };
+
+    this.getFoldWidgetRange = function(session, foldStyle, row) {
+      const line = session.getLine(row);
+      if (this.foldingStartMarker.test(line)) {
+        return MarkdownFoldMode.prototype.getFoldWidgetRange.call(this, session, foldStyle, row);
+      }
+      const endRow = this.getBulletChildrenEnd(session, row);
+      if (endRow <= row) return;
+      return new Range(row, line.length, endRow, session.getLine(endRow).length);
+    };
+  }).call(BulletFoldMode.prototype);
+
+  bulletFoldMode = new BulletFoldMode();
+  return bulletFoldMode;
+}
+
 // ACEエディタの初期化
 function initEditor(tabId, containerId) {
   const editor = ace.edit(containerId);
@@ -429,6 +487,8 @@ function initEditor(tabId, containerId) {
   // 基本設定
   editor.setTheme(currentTheme || settings.theme);
   editor.session.setMode("ace/mode/markdown");
+  editor.session.setFoldStyle('markbegin');
+  editor.session.$setFolding(getBulletFoldMode());
   editor.setFontSize(settings.fontSize);
   editor.container.style.lineHeight = settings.lineHeight;
   editor.setOption("wrap", settings.wordWrap);
@@ -809,6 +869,7 @@ function initEditor(tabId, containerId) {
 
   editor.on('changeSelection', () => {
     editorInteractions[tabId] = true;
+    updateSelectionCount();
   });
 
   // IME変換状態の追跡
@@ -849,6 +910,24 @@ function updateWordCount() {
   
   document.getElementById('word-count').textContent = `Words: ${words}`;
   document.getElementById('char-count').textContent = `Chars: ${chars}`;
+  updateSelectionCount();
+}
+
+// 選択範囲の行数・文字数をステータスバーに表示
+function updateSelectionCount() {
+  const el = document.getElementById('selection-count');
+  const activeTab = tabManager.getActiveTab();
+  const editor = activeTab ? editors[activeTab.id] : null;
+  if (!editor || editor.selection.isEmpty()) {
+    el.textContent = '';
+    el.classList.add('hidden');
+    return;
+  }
+  const range = editor.getSelectionRange();
+  const lines = range.end.row - range.start.row + 1;
+  const chars = Array.from(editor.getSelectedText()).length;
+  el.textContent = `選択: ${lines}行 / ${chars}文字`;
+  el.classList.remove('hidden');
 }
 
 // ファイル状態の更新
@@ -1987,6 +2066,32 @@ function showEditorContextMenu(event, tabId) {
     }
   );
 
+  // 折りたたみメニュー
+  menuItems.push({ separator: true });
+  menuItems.push(
+    {
+      text: '折りたたみ/展開',
+      action: () => {
+        editor.session.toggleFoldWidget();
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: 'すべて折りたたむ',
+      action: () => {
+        editor.session.foldAll();
+        hideEditorContextMenu();
+      }
+    },
+    {
+      text: 'すべて展開',
+      action: () => {
+        editor.session.unfold();
+        hideEditorContextMenu();
+      }
+    }
+  );
+
   // 表メニュー
   menuItems.push({ separator: true });
 
@@ -2126,6 +2231,19 @@ function hideTabContextMenu() {
   const tabContextMenu = document.getElementById('tab-context-menu');
   tabContextMenu.style.display = 'none';
   currentContextTabId = null;
+}
+
+// これ以外のタブを閉じる（右クリックから）
+async function closeOtherTabsFromContext() {
+  const keepTabId = currentContextTabId;
+  hideTabContextMenu();
+  if (keepTabId === null) return;
+  
+  const otherTabIds = tabManager.tabs.filter(tab => tab.id !== keepTabId).map(tab => tab.id);
+  for (const tabId of otherTabIds) {
+    await tabManager.closeTab(tabId);
+  }
+  if (tabManager.activeTabId !== keepTabId) tabManager.switchToTab(keepTabId);
 }
 
 // すべてのタブを閉じる（右クリックから）
@@ -2933,6 +3051,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('status-devtools').addEventListener('click', openDevToolsFromStatusContext);
 
   // タブ用コンテキストメニュー
+  document.getElementById('tab-close-others').addEventListener('click', closeOtherTabsFromContext);
   document.getElementById('tab-close-all').addEventListener('click', closeAllTabsFromContext);
 
   // ステータスバーの右クリック

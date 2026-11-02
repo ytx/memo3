@@ -125,6 +125,7 @@
       
       <div class="status-bar">
         <span id="status-text">Ready</span>
+        <span id="selection-count" class="hidden"></span>
         <span id="word-count">Words: 0</span>
         <span id="char-count">Chars: 0</span>
       </div>
@@ -396,11 +397,13 @@
   
   <!-- タブ用コンテキストメニュー -->
   <div id="tab-context-menu" class="context-menu">
+    <div id="tab-close-others" class="context-menu-item">これ以外のタブを閉じる</div>
     <div id="tab-close-all" class="context-menu-item">すべてのタブを閉じる</div>
   </div>
   
   <script src="node_modules/ace-builds/src-min-noconflict/ace.js"></script>
   <script src="node_modules/ace-builds/src-min-noconflict/ext-language_tools.js"></script>
+  <script src="node_modules/ace-builds/src-min-noconflict/mode-markdown.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
