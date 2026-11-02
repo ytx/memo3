@@ -249,6 +249,31 @@ cat > dist/index.html << EOF
     .footer a:hover {
       text-decoration: underline;
     }
+    .notice {
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      color: #5d4037;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .notice strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #e65100;
+    }
+    .notice ol {
+      margin: 6px 0 0 20px;
+    }
+    .notice code {
+      background: #f1e7d0;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -287,6 +312,15 @@ EOF
   done
 
   cat >> dist/index.html << 'EOF'
+        </div>
+        <div class="notice">
+          <strong>「壊れているため開けません」と表示される場合</strong>
+          このアプリは Apple の公証（notarization）を受けていないため、macOS の Gatekeeper が初回起動をブロックすることがあります。ファイル自体は壊れていません。次のいずれかの方法で起動できます。
+          <ol>
+            <li>memo3 を <code>アプリケーション</code> フォルダに入れたあと、ターミナルで次のコマンドを実行してから通常どおり開く<br><code>xattr -cr /Applications/memo3.app</code></li>
+            <li>「開発元を確認できません」と表示される場合は、システム設定 →「プライバシーとセキュリティ」を開き、一番下の「このまま開く」を押す（macOS 14 以前は Finder で右クリック →「開く」でも可）</li>
+          </ol>
+          一度起動できれば、次回以降は通常どおりダブルクリックで開けます。
         </div>
       </div>
 EOF

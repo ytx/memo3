@@ -870,6 +870,38 @@ function createWindow() {
         { type: 'separator' },
         { role: 'togglefullscreen' }
       ]
+    },
+    {
+      label: 'Window',
+      role: 'window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { type: 'separator' },
+        {
+          label: '次のタブ',
+          accelerator: 'Ctrl+Tab',
+          click: () => {
+            mainWindow.webContents.send('next-tab');
+          }
+        },
+        {
+          label: '前のタブ',
+          accelerator: 'Ctrl+Shift+Tab',
+          click: () => {
+            mainWindow.webContents.send('previous-tab');
+          }
+        },
+        {
+          label: 'タブを閉じる',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => {
+            mainWindow.webContents.send('close-tab');
+          }
+        },
+        { type: 'separator' },
+        { role: 'front' }
+      ]
     }
   ];
 

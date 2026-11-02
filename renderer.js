@@ -3203,6 +3203,13 @@ document.addEventListener('DOMContentLoaded', () => {
 window.api.onNewMemo(() => createNewTabWithFile());
 window.api.onSaveMemo(() => saveFile());
 window.api.onOpenSettings(() => showSettings());
+window.api.onNextTab(() => tabManager.switchToNextTab());
+window.api.onPreviousTab(() => tabManager.switchToPreviousTab());
+window.api.onCloseTab(() => {
+  if (tabManager.activeTabId !== null) {
+    tabManager.closeTab(tabManager.activeTabId);
+  }
+});
 
 // ファイル更新イベントの処理
 window.api.onFilesUpdated(async (_, updatedFiles) => {

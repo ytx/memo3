@@ -70,6 +70,15 @@ contextBridge.exposeInMainWorld('api', {
   onOpenSettings: (callback) => {
     ipcRenderer.on('open-settings', callback);
   },
+  onNextTab: (callback) => {
+    ipcRenderer.on('next-tab', callback);
+  },
+  onPreviousTab: (callback) => {
+    ipcRenderer.on('previous-tab', callback);
+  },
+  onCloseTab: (callback) => {
+    ipcRenderer.on('close-tab', callback);
+  },
   onFilesUpdated: (callback) => {
     ipcRenderer.on('files-updated', callback);
   },
